@@ -1,35 +1,106 @@
 # PilotLynx
-PilotLynx is a CLI for orchestrating Claude Agent SDK workflows across isolated projects.
 
-PilotLynx gives you a single `plynx` command that manages project scaffolding, secret injection, workflow execution, scheduling, and cross-project self-improvement — all from your terminal.
+Local monorepo orchestration for Claude Agent SDK workflows. One CLI to manage project scaffolding, policy-gated secrets, cron scheduling, and cross-project self-improvement.
 
-## Why PilotLynx
+## What Makes PilotLynx Different
 
-**Project isolation with a registry.** Each project is sandboxed — its own folder, config, workflows, and secrets policy. Projects can live anywhere on disk (workspace siblings, external repos, monorepo subdirs) and are tracked by a registry, not by filesystem convention.
+Three features that don't exist in other AI workflow tools:
 
-**Policy-gated secrets.** One `.env`, per-project allowlists. A project only sees the secrets its policy permits — injected at runtime, never written to files.
+### Cron Ping
 
-**Tick-based scheduling.** Define cron schedules per project. `plynx schedule tick` evaluates what's due, applies catch-up policies for missed runs (run_all, run_latest, skip), and executes — no daemon required, just a system cron entry.
+Define cron schedules per project. PilotLynx uses tick-based scheduling — no daemon, no background process. You run `plynx schedule tick` from a system cron entry and it figures out what's due.
 
-**Cross-project self-improvement.** `plynx improve` observes run outcomes across all projects, distills insights, and triggers each project's own agent to update its docs, skills, and memory. Runs automatically via schedule.
+**`schedule.yaml`** (in each project):
 
-### Other features
+```yaml
+schedules:
+  - workflow: daily_feedback
+    cron: "0 9 * * *"
+    timezone: America/New_York
+    catchUpPolicy: run_latest
+```
 
-- Every CLI command is a Claude Agent SDK agent — the CLI is a thin wrapper with no business logic
-- Bounded workflows with clear start/end — no long-lived sessions, failed runs rerun deterministically
-- All state is committed files — briefs, runbooks, skills, memory in git, zero dependence on session state
-- Scoped context — workflows see only their project directory plus shared docs/insights
-- No external plugins — all skills are local, committed, and code-reviewable
-- Tool access policies independent from secrets policies (defense-in-depth)
-- Filesystem sandboxing via bwrap (Linux) and sandbox-exec (macOS)
+**How a tick works:**
 
-## Architecture: CLI = Agent SDK
+1. Read every project's `schedule.yaml`
+2. Compare cron expressions against last recorded run times
+3. Apply the catch-up policy to any missed runs
+4. Execute due workflows and record the new last-run time
 
-The CLI is a thin wrapper around Claude Agent SDK agents. Every `plynx` command invokes a dedicated agent, making the CLI a convenience layer rather than the primary execution surface.
+**Catch-up policies** (when the machine was off or tick didn't fire):
 
-- **Each command = one agent.** `plynx project create foo` runs a "project-create" agent that scaffolds the directory from the template.
-- **Most CLI commands have corresponding Claude Code skills** for use inside projects.
-- **Business logic lives in agents.** Exception: `plynx init` scaffolds the workspace directly since no workspace exists yet for agent context.
+| Policy | Behavior |
+|--------|----------|
+| `run_latest` | Run only the most recent missed occurrence (default) |
+| `run_all` | Run every missed occurrence in order |
+| `skip` | Discard all missed runs, wait for the next future occurrence |
+
+Missed runs older than **7 days** are always discarded regardless of policy.
+
+`plynx init` auto-installs a system cron entry (`*/15 * * * *`) so scheduling works out of the box. Each tick also runs the self-improvement loop automatically (once per 24h, configurable).
+
+```bash
+plynx schedule status myproject   # see what's scheduled, last/next runs
+```
+
+### Self-Improvement Loop
+
+`plynx improve` triggers a two-phase cycle that makes projects learn from their own run history:
+
+**Phase 1 — Observation (Lynx-owned, read-only):** Reads conversation logs, user feedback, and run outcomes across all projects. Produces per-project summaries and cross-project insights (stored in `pilotlynx/shared/insights/`).
+
+**Phase 2 — Improvement (project-owned, Lynx-triggered):** Invokes each project's `daily_feedback` workflow with the distilled summary. The project's own agent decides what to update — brief, runbook, skills, or memory.
+
+Key design constraint: **Lynx never writes project files.** The orchestrator observes and triggers; only the project's own agent modifies its files.
+
+Auto-runs via `schedule tick` once per 24h. Manual trigger anytime with `plynx improve`. Toggle in `plynx.yaml`:
+
+```yaml
+autoImprove:
+  enabled: false   # default: true
+```
+
+```bash
+plynx insights                    # view cross-project insights
+plynx insights --since 2025-01-10 # filter by date
+```
+
+### Shared Env
+
+One `.env` file, per-project allowlists. A project sees only the secrets its policy permits — injected at runtime, never written to files.
+
+**`pilotlynx/shared/policies/secrets-access.yaml`:**
+
+```yaml
+version: 1
+shared:
+  - ANTHROPIC_API_KEY         # every project gets this
+
+projects:
+  my-web-app:
+    allowed:
+      - GITHUB_TOKEN
+      - DATABASE_URL
+    mappings:
+      SLACK_URL: SLACK_WEBHOOK  # project sees SLACK_URL, sourced from .env's SLACK_WEBHOOK
+
+  my-cli-tool:
+    allowed:
+      - GITHUB_TOKEN
+```
+
+**Inspect and export:**
+
+```bash
+plynx env myproject              # dotenv format
+plynx env myproject --export     # export KEY=value (eval-able)
+plynx env myproject --json       # {"KEY": "value"}
+plynx link myproject --direnv    # generate .envrc for MCP server ${VAR} expansion
+```
+
+**Auto-migration:** When you adopt an existing project with `plynx project add`, PilotLynx detects secrets in the project's `.env` and `.mcp.json` literals, consolidates them into the central store, and updates the policy — no manual copy-paste.
+
+**Default is deny-all.** No policy file = zero secrets injected. See [`docs/secrets-and-mcp.md`](docs/secrets-and-mcp.md) for the full guide.
 
 ## Requirements
 
@@ -68,7 +139,7 @@ my-agents/
     .gitignore
 ```
 
-It also writes a global config at `~/.config/pilotlynx/config.yaml` (Linux) so the CLI works from any directory.
+It also writes a global config at `~/.config/pilotlynx/config.yaml` (Linux) so the CLI works from any directory, and installs a cron entry for `plynx schedule tick` every 15 minutes.
 
 ### 2. Create or add a project
 
@@ -87,7 +158,7 @@ plynx project add myrepo --path /path/to/existing/repo
 - `workflows/` — TypeScript Agent SDK workflow files
 - `memory/` — durable knowledge (committed to git)
 
-`add` adopts an existing directory: adds missing scaffolding files without overwriting anything, registers the project, then runs an interactive agent that examines the existing code and helps fill in project docs.
+`add` adopts an existing directory: adds missing scaffolding files without overwriting anything, registers the project, migrates detected secrets into the central store, then runs an interactive agent that examines the existing code and helps fill in project docs.
 
 Both commands register the project in `pilotlynx/projects.yaml` and prompt for secrets access configuration.
 
@@ -119,10 +190,31 @@ Reports missing files or directories.
 | `plynx verify <project>` | Validate project structure |
 | `plynx improve` | Run self-improvement loop across projects |
 | `plynx schedule tick` | Run due scheduled workflows |
+| `plynx schedule status <project>` | Show schedules, last/next run times, auto-improve state |
+| `plynx logs <project>` | View recent run logs (`--last`, `--workflow`, `--failures`) |
+| `plynx insights` | View cross-project insights (`--last`, `--since`) |
 | `plynx sync template <project>` | Apply template updates to a project |
 | `plynx env <project>` | Output policy-filtered secrets (`--export`, `--json`, `--envrc`) |
 | `plynx link <project>` | Configure a project for direct access (`--direnv` for `.envrc`) |
 | `plynx unlink <project>` | Remove direct-access configuration |
+
+## Other Features
+
+- Every CLI command is a Claude Agent SDK agent — the CLI is a thin wrapper with no business logic
+- Bounded workflows with clear start/end — no long-lived sessions, failed runs rerun deterministically
+- All state is committed files — briefs, runbooks, skills, memory in git, zero dependence on session state
+- Scoped context — workflows see only their project directory plus shared docs/insights
+- No external plugins — all skills are local, committed, and code-reviewable
+- Tool access policies independent from secrets policies (defense-in-depth)
+- Filesystem sandboxing via bwrap (Linux) and sandbox-exec (macOS)
+
+## Architecture: CLI = Agent SDK
+
+The CLI is a thin wrapper around Claude Agent SDK agents. Every `plynx` command invokes a dedicated agent, making the CLI a convenience layer rather than the primary execution surface.
+
+- **Each command = one agent.** `plynx project create foo` runs a "project-create" agent that scaffolds the directory from the template.
+- **Most CLI commands have corresponding Claude Code skills** for use inside projects.
+- **Business logic lives in agents.** Exception: `plynx init` scaffolds the workspace directly since no workspace exists yet for agent context.
 
 ## Working Directly in a Project
 
@@ -172,29 +264,6 @@ myproject/
   schedule.yaml           # cron schedules for workflows
 ```
 
-## Secrets
-
-Create a `.env` file inside the `pilotlynx/` config directory:
-
-```
-ANTHROPIC_API_KEY=sk-...   # only needed for API key auth; omit if using claude login
-GITHUB_TOKEN=ghp_...
-```
-
-Define which projects can access which secrets in `pilotlynx/shared/policies/secrets-access.yaml`.
-
-### Injection Rule
-
-When running a project workflow, PilotLynx builds the runtime environment as:
-
-1. Load secrets from `pilotlynx/.env`.
-2. Select only the variables permitted for the target project (allowlist, plus project-specific mappings from policy).
-3. Launch the workflow with only the permitted variables available.
-
-A project receives only the variables it is allowed to see. Multiple keys for the same tool are supported by policy-controlled mapping, without duplicating secrets files.
-
-Secrets are injected at runtime only — they never appear in logs or committed files.
-
 ## Workflows
 
 Each project has workflows under `workflows/` — TypeScript scripts that run Claude Agent SDK.
@@ -216,68 +285,12 @@ Each project should support these baseline workflows:
 | `task_execute` | Execute a specific task from prompt input |
 | `project_review` | Produce a short project status update |
 
-## Scheduling
+## Security Model
 
-Each project can define a `schedule.yaml` to run workflows on a cron schedule:
-
-```yaml
-schedules:
-  - workflow: daily_feedback
-    cron: "0 9 * * *"          # standard cron syntax
-    timezone: America/New_York # IANA timezone
-    catchUpPolicy: run_latest  # what to do about missed runs
-```
-
-### How it works
-
-PilotLynx uses **tick-based scheduling** — there is no long-running daemon. You run `plynx schedule tick` periodically (via system cron, systemd timer, or any scheduler) and it evaluates which workflows are due.
-
-Each tick:
-1. Reads every project's `schedule.yaml`.
-2. Compares the cron expression against the last recorded run time.
-3. Applies the catch-up policy to any missed runs.
-4. Executes the due workflows and records the new last-run time.
-
-### Catch-up policies
-
-When runs are missed (machine was off, tick didn't fire), the policy controls what happens:
-
-| Policy | Behavior |
-|--------|----------|
-| `run_latest` | Run only the most recent missed occurrence (default) |
-| `run_all` | Run every missed occurrence in order |
-| `skip` | Discard all missed runs, wait for the next future occurrence |
-
-Missed runs older than **7 days** are always discarded regardless of policy.
-
-### Automation examples
-
-**System cron** (run tick every 15 minutes):
-
-```
-*/15 * * * * plynx schedule tick >> /var/log/plynx-tick.log 2>&1
-```
-
-**systemd timer** — create `plynx-tick.service` and `plynx-tick.timer` units that call `plynx schedule tick` on your preferred interval.
-
-### Auto-improve
-
-`schedule tick` automatically runs the self-improvement loop once per 24 hours. This is enabled by default and can be disabled in `plynx.yaml`:
-
-```yaml
-autoImprove:
-  enabled: false
-```
-
-You can also run it manually anytime with `plynx improve`.
-
-## Self-Improvement Loop
-
-`plynx improve` triggers a two-phase cycle:
-
-**Observation (Lynx-owned):** Reads conversation logs, user feedback, and run outcomes across all projects. Distills per-project summaries and produces abstract cross-project insights (stored in `pilotlynx/shared/insights/`).
-
-**Improvement (Project-owned, Lynx-triggered):** Invokes each project's `daily_feedback` workflow with the distilled summary. The project's own agent decides what to update — brief, runbook, skills, or memory. Lynx never writes to project files directly.
+- Project workflows operate inside their project folder and must not access other project directories.
+- Secrets are injected via env and never stored in committed files.
+- No external skills marketplace — all skills are local and committed.
+- Tool access is policy-gated — secrets allowlists and tool allowlists are independent controls (defense-in-depth).
 
 ## Claude Code Compatibility
 
@@ -285,13 +298,6 @@ You can also run it manually anytime with `plynx improve`.
 - `plynx` works from the workspace root, from project directories (via global config), and from any other location.
 - `plynx link --direnv` generates `.envrc` for MCP servers that need secrets via `${VAR}` expansion.
 - Each CLI command maps to a Claude Code skill — same agent, same behavior.
-
-## Security Model
-
-- Project workflows operate inside their project folder and must not access other project directories.
-- Secrets are injected via env and never stored in committed files.
-- No external skills marketplace — all skills are local and committed.
-- Tool access is policy-gated — secrets allowlists and tool allowlists are independent controls (defense-in-depth).
 
 ## License
 

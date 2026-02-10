@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
+import { Cron } from 'croner';
 import { listProjects } from '../lib/project.js';
 import { evaluateSchedules, loadScheduleConfig, loadScheduleState, saveScheduleState, loadImproveState, saveImproveState } from '../lib/schedule.js';
 import { loadWorkspaceConfig } from '../lib/config.js';
@@ -84,6 +85,68 @@ export function makeScheduleCommand(): Command {
         console.log(chalk.dim('No workflows due at this time.'));
       } else {
         console.log(chalk.green(`\n${totalRuns} workflow(s) executed.`));
+      }
+    });
+
+  cmd
+    .command('status')
+    .description('Show schedule status for a project')
+    .argument('<project>', 'project name')
+    .action(async (project: string) => {
+      const scheduleConfig = loadScheduleConfig(project);
+
+      if (!scheduleConfig || scheduleConfig.schedules.length === 0) {
+        console.log(chalk.dim(`No schedules configured for "${project}".`));
+        console.log(chalk.dim(`Add a schedule.yaml to the project directory.`));
+        return;
+      }
+
+      const state = loadScheduleState(project);
+      const now = new Date();
+
+      console.log(chalk.blue(`Schedule status for ${project}\n`));
+
+      // Header
+      const cols = ['Workflow', 'Cron', 'Last Run', 'Next Run', 'Catch-Up'];
+      const widths = [20, 20, 24, 24, 12];
+      const header = cols.map((c, i) => c.padEnd(widths[i])).join('');
+      console.log(chalk.bold(header));
+      console.log('─'.repeat(header.length));
+
+      for (const entry of scheduleConfig.schedules) {
+        const lastRunStr = state.lastRuns[entry.workflow];
+        const lastRun = lastRunStr ?? '—';
+
+        let nextRun = '—';
+        try {
+          const job = new Cron(entry.cron, { timezone: entry.timezone });
+          const next = job.nextRun(now);
+          if (next) nextRun = next.toISOString().replace('T', ' ').slice(0, 19);
+        } catch {
+          nextRun = 'invalid cron';
+        }
+
+        const lastDisplay = lastRunStr
+          ? new Date(lastRunStr).toISOString().replace('T', ' ').slice(0, 19)
+          : '—';
+
+        const row = [
+          entry.workflow.padEnd(widths[0]),
+          entry.cron.padEnd(widths[1]),
+          lastDisplay.padEnd(widths[2]),
+          nextRun.padEnd(widths[3]),
+          entry.catchUpPolicy.padEnd(widths[4]),
+        ].join('');
+        console.log(row);
+      }
+
+      // Auto-improve status
+      const wsConfig = loadWorkspaceConfig();
+      const improveState = loadImproveState();
+      console.log('');
+      console.log(chalk.bold('Auto-improve: ') + (wsConfig.autoImprove.enabled ? chalk.green('enabled') : chalk.dim('disabled')));
+      if (improveState.lastRun) {
+        console.log(chalk.bold('Last improve: ') + new Date(improveState.lastRun).toISOString().replace('T', ' ').slice(0, 19));
       }
     });
 

@@ -13,6 +13,8 @@ import { makeInitCommand } from './commands/init.js';
 import { makeEnvCommand } from './commands/env.js';
 import { makeLinkCommand } from './commands/link.js';
 import { makeUnlinkCommand } from './commands/unlink.js';
+import { makeLogsCommand } from './commands/logs.js';
+import { makeInsightsCommand } from './commands/insights.js';
 
 const program = new Command();
 
@@ -39,6 +41,8 @@ program.addCommand(makeImproveCommand());
 program.addCommand(makeEnvCommand());
 program.addCommand(makeLinkCommand());
 program.addCommand(makeUnlinkCommand());
+program.addCommand(makeLogsCommand());
+program.addCommand(makeInsightsCommand());
 
 try {
   await program.parseAsync(process.argv);
