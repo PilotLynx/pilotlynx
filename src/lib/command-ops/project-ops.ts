@@ -1,12 +1,13 @@
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, statSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createProjectFromTemplate, addScaffolding } from '../project.js';
 import { isRegistered, registerProject } from '../registry.js';
-import { getConfigRoot } from '../config.js';
+import { getConfigRoot, ENV_FILE } from '../config.js';
 import { runAgent } from '../agent-runner.js';
 import { getProjectCreateAgentConfig } from '../../agents/project-create.agent.js';
 import { getProjectAddAgentConfig } from '../../agents/project-add.agent.js';
 import { validateProjectName } from '../validation.js';
+import { executeSecretsMigration } from './secrets-migration-ops.js';
 
 export interface ProjectCreateResult {
   success: boolean;
@@ -64,7 +65,22 @@ export async function executeProjectAdd(
   const { added, skipped } = addScaffolding(name, resolved);
   registerProject(name, resolved);
 
-  const config = getProjectAddAgentConfig(name, availableKeys, currentPolicy);
+  // Auto-migrate secrets before handing off to the agent
+  const migrationResult = await executeSecretsMigration(name, resolved);
+
+  // Re-read available keys (migration may have added new ones to central .env)
+  if (migrationResult.migrated) {
+    const envFile = ENV_FILE();
+    if (existsSync(envFile)) {
+      const content = readFileSync(envFile, 'utf8');
+      availableKeys = content.split('\n')
+        .map(l => l.trim())
+        .filter(l => l && !l.startsWith('#') && l.includes('='))
+        .map(l => l.split('=')[0].trim());
+    }
+  }
+
+  const config = getProjectAddAgentConfig(name, availableKeys, currentPolicy, migrationResult.summary);
   const result = await runAgent(config);
 
   if (!result.success) {

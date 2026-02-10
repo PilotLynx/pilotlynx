@@ -8,6 +8,7 @@ export function getProjectAddAgentConfig(
   name: string,
   availableSecretKeys: string[],
   currentSecretsPolicy: string,
+  migrationSummary?: string,
 ): AgentConfig {
   const projectDir = getProjectDir(name);
   return {
@@ -17,6 +18,7 @@ export function getProjectAddAgentConfig(
       availableSecretKeys: availableSecretKeys.join(', ') || '(none configured)',
       currentSecretsPolicy,
       secretsPolicyPath: join(POLICIES_DIR(), 'secrets-access.yaml'),
+      migrationSummary: migrationSummary || '',
     }),
     cwd: projectDir,
     additionalDirectories: [POLICIES_DIR()],

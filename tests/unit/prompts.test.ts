@@ -99,6 +99,7 @@ describe('prompt loader', () => {
         availableSecretKeys: 'ANTHROPIC_API_KEY',
         currentSecretsPolicy: 'version: 1\nshared: []\nprojects: {}\n',
         secretsPolicyPath: '/workspace/pilotlynx/shared/policies/secrets-access.yaml',
+        migrationSummary: '',
       });
       expect(result).toContain('"existing-repo"');
       expect(result).toContain('/home/user/repos/existing-repo');
@@ -122,6 +123,25 @@ describe('prompt loader', () => {
       expect(result).toContain('"beta"');
       expect(result).toContain('/pkg/template');
       expect(result).toContain('/workspace/projects/beta');
+    });
+
+    it('loads secrets-migration.yaml — secrets_migration_confirm', () => {
+      const result = loadPrompt('secrets-migration', 'secrets_migration_confirm', {
+        projectName: 'my-app',
+        totalMigratable: '5',
+        newKeysCount: '2',
+        newKeysList: '- NEW_KEY (from .env)',
+        dedupedCount: '2',
+        dedupedList: '- SAME_KEY (from .env)',
+        conflictsCount: '1',
+        conflictsList: '- CONFLICT_KEY (from .env)',
+        mcpNote: '',
+      });
+      expect(result).toContain('"my-app"');
+      expect(result).toContain('5 secret key(s)');
+      expect(result).toContain('New Keys (2)');
+      expect(result).toContain('NEW_KEY');
+      expect(result).toContain('Conflicts (1)');
     });
   });
 

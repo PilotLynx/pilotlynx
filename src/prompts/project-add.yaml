@@ -30,7 +30,8 @@ prompts:
          ```
          {{currentSecretsPolicy}}
          ```
-       - Ask the user which secrets this project needs access to.
+       {{migrationSummary}}
+       - Ask the user which additional secrets this project needs access to (if any).
        - Update the secrets-access.yaml file to add this project's allowed secrets.
        - Add the project under `projects:` with an `allowed:` list.
     6. Update .mcp.json if MCP servers are needed.
