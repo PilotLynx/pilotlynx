@@ -1,8 +1,11 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parse as parseYaml } from 'yaml';
 import { resolveProjectPath } from './registry.js';
 import { loadGlobalConfig } from './global-config.js';
+import { WorkspaceConfigSchema } from './types.js';
+import type { WorkspaceConfig } from './types.js';
 
 // ── Constants ──
 
@@ -114,6 +117,11 @@ export const TEMPLATE_DIR = (): string => {
 
 export function getProjectDir(name: string): string {
   return resolveProjectPath(name);
+}
+
+export function loadWorkspaceConfig(): WorkspaceConfig {
+  const raw = parseYaml(readFileSync(join(getConfigRoot(), 'plynx.yaml'), 'utf8'));
+  return WorkspaceConfigSchema.parse(raw);
 }
 
 export function getVersion(): string {

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { getMissedRuns, applyCatchUpPolicy, evaluateSchedules, loadScheduleState, loadScheduleConfig, saveScheduleState } from '../../src/lib/schedule.js';
+import { getMissedRuns, applyCatchUpPolicy, evaluateSchedules, loadScheduleState, loadScheduleConfig, saveScheduleState, loadImproveState, saveImproveState } from '../../src/lib/schedule.js';
 import { resetConfigCache, CONFIG_DIR_NAME } from '../../src/lib/config.js';
 import { registerProject, resetRegistryCache } from '../../src/lib/registry.js';
 import type { ScheduleConfig, ScheduleState } from '../../src/lib/types.js';
@@ -221,6 +221,45 @@ describe('schedule', () => {
     it('loadScheduleConfig returns null when file is missing', () => {
       const config = loadScheduleConfig('proj');
       expect(config).toBeNull();
+    });
+  });
+
+  describe('loadImproveState / saveImproveState', () => {
+    let tmpDir: string;
+    let configDir: string;
+    const origEnv = process.env.PILOTLYNX_ROOT;
+
+    beforeEach(() => {
+      tmpDir = mkdtempSync(join(tmpdir(), 'plynx-imp-'));
+      configDir = join(tmpDir, CONFIG_DIR_NAME);
+      process.env.PILOTLYNX_ROOT = configDir;
+      resetConfigCache();
+      mkdirSync(configDir, { recursive: true });
+    });
+
+    afterEach(() => {
+      if (origEnv !== undefined) process.env.PILOTLYNX_ROOT = origEnv;
+      else delete process.env.PILOTLYNX_ROOT;
+      rmSync(tmpDir, { recursive: true, force: true });
+      resetConfigCache();
+    });
+
+    it('returns null lastRun when file is missing', () => {
+      const state = loadImproveState();
+      expect(state).toEqual({ lastRun: null });
+    });
+
+    it('returns null lastRun for malformed JSON', () => {
+      writeFileSync(join(configDir, 'improve-state.json'), '!!!bad!!!');
+      const state = loadImproveState();
+      expect(state).toEqual({ lastRun: null });
+    });
+
+    it('round-trips correctly', () => {
+      const ts = '2025-01-15T12:00:00.000Z';
+      saveImproveState(ts);
+      const state = loadImproveState();
+      expect(state).toEqual({ lastRun: ts });
     });
   });
 });

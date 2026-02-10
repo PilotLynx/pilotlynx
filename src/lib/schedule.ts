@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, existsSync, renameSync, mkdirSync } from '
 import { join, dirname } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { Cron } from 'croner';
-import { getProjectDir } from './config.js';
+import { getProjectDir, getConfigRoot } from './config.js';
 import { ScheduleConfigSchema, ScheduleStateSchema } from './types.js';
 import type { ScheduleConfig, ScheduleState, ScheduleEntry } from './types.js';
 
@@ -30,6 +30,28 @@ export function saveScheduleState(project: string, state: ScheduleState): void {
   mkdirSync(dirname(filePath), { recursive: true });
   const tmpPath = `${filePath}.tmp`;
   writeFileSync(tmpPath, JSON.stringify(state, null, 2), 'utf8');
+  renameSync(tmpPath, filePath);
+}
+
+export interface ImproveState {
+  lastRun: string | null;
+}
+
+export function loadImproveState(): ImproveState {
+  const filePath = join(getConfigRoot(), 'improve-state.json');
+  if (!existsSync(filePath)) return { lastRun: null };
+  try {
+    const raw = JSON.parse(readFileSync(filePath, 'utf8'));
+    return { lastRun: raw.lastRun ?? null };
+  } catch {
+    return { lastRun: null };
+  }
+}
+
+export function saveImproveState(lastRun: string): void {
+  const filePath = join(getConfigRoot(), 'improve-state.json');
+  const tmpPath = `${filePath}.tmp`;
+  writeFileSync(tmpPath, JSON.stringify({ lastRun }, null, 2), 'utf8');
   renameSync(tmpPath, filePath);
 }
 

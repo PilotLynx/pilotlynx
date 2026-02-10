@@ -1,7 +1,9 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { listProjects } from '../lib/project.js';
-import { evaluateSchedules, loadScheduleConfig, loadScheduleState, saveScheduleState } from '../lib/schedule.js';
+import { evaluateSchedules, loadScheduleConfig, loadScheduleState, saveScheduleState, loadImproveState, saveImproveState } from '../lib/schedule.js';
+import { loadWorkspaceConfig } from '../lib/config.js';
+import { executeImprove } from '../lib/command-ops/improve-ops.js';
 import { buildProjectEnv } from '../lib/secrets.js';
 import { getRunAgentConfig } from '../agents/run.agent.js';
 import { runAgent } from '../lib/agent-runner.js';
@@ -17,10 +19,6 @@ export function makeScheduleCommand(): Command {
     .description('Evaluate and run due scheduled workflows across all projects')
     .action(async () => {
       const projects = listProjects();
-      if (projects.length === 0) {
-        console.log(chalk.yellow('No projects found.'));
-        return;
-      }
 
       console.log(chalk.blue('Evaluating schedules...\n'));
       let totalRuns = 0;
@@ -60,6 +58,26 @@ export function makeScheduleCommand(): Command {
         }
 
         saveScheduleState(project, state);
+      }
+
+      // Auto-improve (once per 24h)
+      const wsConfig = loadWorkspaceConfig();
+      if (wsConfig.autoImprove.enabled) {
+        const now = new Date();
+        const improveState = loadImproveState();
+        const lastImprove = improveState.lastRun ? new Date(improveState.lastRun) : null;
+        const hoursSince = lastImprove ? (now.getTime() - lastImprove.getTime()) / (1000 * 60 * 60) : Infinity;
+
+        if (hoursSince >= 24) {
+          console.log(chalk.blue('\nRunning auto-improve...'));
+          const improveResult = await executeImprove();
+          saveImproveState(now.toISOString());
+          if (improveResult.success) {
+            console.log(chalk.green('Auto-improve completed.'));
+          } else {
+            console.log(chalk.yellow(`Auto-improve finished with issues: ${improveResult.error ?? 'some workflows failed'}`));
+          }
+        }
       }
 
       if (totalRuns === 0) {

@@ -5,21 +5,23 @@ PilotLynx gives you a single `plynx` command that manages project scaffolding, s
 
 ## Why PilotLynx
 
-**One CLI, many projects.** Each project gets its own folder, its own config, its own workflows. Projects cannot touch each other's files.
+**Project isolation with a registry.** Each project is sandboxed — its own folder, config, workflows, and secrets policy. Projects can live anywhere on disk (workspace siblings, external repos, monorepo subdirs) and are tracked by a registry, not by filesystem convention.
 
-**Projects anywhere.** Projects are tracked in a registry, not discovered by convention. Add projects at any filesystem location — workspace siblings, external repos, monorepo subdirectories.
+**Policy-gated secrets.** One `.env`, per-project allowlists. A project only sees the secrets its policy permits — injected at runtime, never written to files.
 
-**Secrets stay safe.** One `.env` file at the workspace root. Each project declares which secrets it needs in a policy file. Secrets are injected at runtime and never written to logs, markdown, or memory files.
+**Tick-based scheduling.** Define cron schedules per project. `plynx schedule tick` evaluates what's due, applies catch-up policies for missed runs (run_all, run_latest, skip), and executes — no daemon required, just a system cron entry.
 
-**Workflows are bounded.** Every run has a clear start and end. No long-lived sessions. Failed runs can be rerun deterministically.
+**Cross-project self-improvement.** `plynx improve` observes run outcomes across all projects, distills insights, and triggers each project's own agent to update its docs, skills, and memory. Runs automatically via schedule.
 
-**All state is files.** Project briefs, runbooks, skills, and memory are committed files in git. Nothing depends on session state or external databases.
+### Other features
 
-**Self-improvement built in.** `plynx improve` runs a review loop across all projects, generating cross-project insights and applying template updates.
-
-**Scoped context** — workflows see only what they need. Project-scoped, curated memory by default.
-
-**Auditable tooling** — no external plugins. All skills are local, committed, and code-reviewable. Tool access is policy-gated.
+- Every CLI command is a Claude Agent SDK agent — the CLI is a thin wrapper with no business logic
+- Bounded workflows with clear start/end — no long-lived sessions, failed runs rerun deterministically
+- All state is committed files — briefs, runbooks, skills, memory in git, zero dependence on session state
+- Scoped context — workflows see only their project directory plus shared docs/insights
+- No external plugins — all skills are local, committed, and code-reviewable
+- Tool access policies independent from secrets policies (defense-in-depth)
+- Filesystem sandboxing via bwrap (Linux) and sandbox-exec (macOS)
 
 ## Architecture: CLI = Agent SDK
 
@@ -257,6 +259,17 @@ Missed runs older than **7 days** are always discarded regardless of policy.
 ```
 
 **systemd timer** — create `plynx-tick.service` and `plynx-tick.timer` units that call `plynx schedule tick` on your preferred interval.
+
+### Auto-improve
+
+`schedule tick` automatically runs the self-improvement loop once per 24 hours. This is enabled by default and can be disabled in `plynx.yaml`:
+
+```yaml
+autoImprove:
+  enabled: false
+```
+
+You can also run it manually anytime with `plynx improve`.
 
 ## Self-Improvement Loop
 

@@ -1,5 +1,17 @@
 import { z } from 'zod';
 
+// ── Workspace Config (plynx.yaml) ──
+
+export const WorkspaceConfigSchema = z.object({
+  version: z.number(),
+  name: z.string(),
+  autoImprove: z.object({
+    enabled: z.boolean().default(true),
+  }).default({ enabled: true }),
+});
+
+export type WorkspaceConfig = z.infer<typeof WorkspaceConfigSchema>;
+
 // ── Global Config ──
 
 export const GlobalConfigSchema = z.object({
