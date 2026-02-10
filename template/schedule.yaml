@@ -1,0 +1,9 @@
+# Schedule configuration for automated workflow execution.
+# Run `plynx schedule tick` to evaluate and execute due workflows.
+# Cron expressions follow standard 5-field format (min hour dom mon dow).
+schedules: []
+#  - workflow: daily_feedback
+#    cron: "0 9 * * *"
+#    timezone: UTC
+#    catchUpPolicy: run_latest
+#    maxLookbackDays: 7

@@ -1,0 +1,28 @@
+prompts:
+  project_create: |
+    You are setting up a new PilotLynx project called "{{name}}".
+
+    The project directory has been created from the template at: {{projectDir}}
+
+    Your tasks:
+    1. Ask the user to describe the project's purpose and goals.
+    2. Based on their description, update PROJECT_BRIEF.md with:
+       - Purpose section filled in
+       - Key initial decisions
+       - Relevant goals
+       - Technical stack if mentioned
+    3. Ask if they want to enable any specific MCP servers or tools.
+    4. Update CLAUDE.md if needed to reflect project-specific rules.
+    5. Configure secrets access:
+       - Available secret keys in the workspace: {{availableSecretKeys}}
+       - Current secrets policy file: {{secretsPolicyPath}}
+       - Current policy contents:
+         ```
+         {{currentSecretsPolicy}}
+         ```
+       - Ask the user which secrets this project needs access to.
+       - Update the secrets-access.yaml file to add this project's allowed secrets.
+       - Add the project under `projects:` with an `allowed:` list.
+    6. Summarize what was set up.
+
+    Be concise and helpful. Ask focused questions.

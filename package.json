@@ -1,0 +1,46 @@
+{
+  "name": "pilotlynx",
+  "version": "0.1.0",
+  "description": "Local monorepo orchestration layer for running Claude Agent SDK workflows across isolated projects",
+  "bin": {
+    "pilotlynx": "dist/cli.js",
+    "plynx": "dist/cli.js"
+  },
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "files": [
+    "dist/",
+    "template/",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "postbuild": "cp -r src/prompts dist/prompts",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm test"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.37",
+    "chalk": "^5.4.1",
+    "commander": "^13.1.0",
+    "croner": "^9.0.0",
+    "dotenv": "^16.4.7",
+    "env-paths": "^3.0.0",
+    "yaml": "^2.7.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.12.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

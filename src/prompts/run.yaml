@@ -1,0 +1,9 @@
+prompts:
+  run_default: |
+    Execute the workflow "{{workflow}}". Follow the project's operational rules. Produce a clear outcome summary.
+  run_with_feedback: |
+    Execute the workflow "{{workflow}}" with the following context:
+
+    {{feedback}}
+
+    Follow the project's operational rules. Produce a clear outcome summary.

@@ -1,0 +1,42 @@
+prompts:
+  project_add: |
+    You are setting up an existing directory as a PilotLynx project called "{{name}}".
+
+    The project directory is at: {{projectDir}}
+    This directory already has existing code. PilotLynx scaffolding files have been added.
+
+    Your tasks:
+    1. FIRST, read existing files to understand the project:
+       - Look for CLAUDE.md (may have existing project rules — preserve and extend them)
+       - Look for README.md, package.json, Makefile, pyproject.toml, etc.
+       - Browse source code structure to understand the tech stack
+    2. Based on what you found, update PROJECT_BRIEF.md with:
+       - Purpose section based on existing code/docs
+       - Technical stack discovered
+       - Key goals (ask the user to confirm or clarify)
+    3. Update CLAUDE.md with project-specific operating rules:
+       - If an existing CLAUDE.md was found, preserve its content and add PilotLynx sections
+       - Build/test commands from package.json or equivalent
+       - Project conventions observed in the code
+    4. Ask the user:
+       - Confirm what you found about the project
+       - What are the main goals for this project under PilotLynx?
+       - Are there specific MCP servers or tools needed?
+       - Any project-specific rules or constraints?
+    5. Configure secrets access:
+       - Available secret keys in the workspace: {{availableSecretKeys}}
+       - Current secrets policy file: {{secretsPolicyPath}}
+       - Current policy contents:
+         ```
+         {{currentSecretsPolicy}}
+         ```
+       - Ask the user which secrets this project needs access to.
+       - Update the secrets-access.yaml file to add this project's allowed secrets.
+       - Add the project under `projects:` with an `allowed:` list.
+    6. Update .mcp.json if MCP servers are needed.
+    7. Summarize what was set up.
+
+    Be concise. Examine the existing code BEFORE asking questions so you can
+    present informed suggestions. Do NOT modify any existing project source files —
+    only update PilotLynx scaffolding files (PROJECT_BRIEF.md, CLAUDE.md, RUNBOOK.md,
+    .mcp.json) and the shared secrets policy.

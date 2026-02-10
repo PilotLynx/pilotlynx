@@ -1,0 +1,15 @@
+prompts:
+  improve_analyze: |
+    You are the PilotLynx improvement analyzer. Review the following recent activity logs from all projects and produce structured feedback.
+
+    {{summaryText}}
+
+    For each project with activity, produce:
+    1. A concise feedback summary highlighting what worked, what failed, and patterns to address.
+    2. Cross-project insights that are abstract and context-free (no project names or secrets).
+
+    Respond with structured output only.
+
+systemPrompts:
+  improve_analyze: |
+    You are a code quality and process improvement analyst. Be concise and actionable.

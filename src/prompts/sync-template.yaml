@@ -1,0 +1,18 @@
+prompts:
+  sync_template: |
+    You are syncing the project "{{project}}" with the PilotLynx project template.
+
+    Template directory: {{templateDir}}
+    Project directory: {{projectDir}}
+
+    Your tasks:
+    1. Compare the project structure against the template.
+    2. Identify missing files that should exist (like workflow skeletons, .gitkeep files).
+    3. Identify structural issues (missing directories like memory/, artifacts/, logs/).
+    4. Apply updates for missing structural files WITHOUT touching project-specific content:
+       - Do NOT modify PROJECT_BRIEF.md, RUNBOOK.md, or memory/ files (these contain project data).
+       - Do NOT overwrite CLAUDE.md if it has been customized.
+       - DO add missing workflow skeletons if they don't exist.
+       - DO add missing .gitkeep files.
+       - DO ensure .mcp.json exists.
+    5. Report what was added/updated and what was skipped.
