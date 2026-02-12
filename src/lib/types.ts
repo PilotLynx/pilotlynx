@@ -105,6 +105,11 @@ export interface RunRecord {
   costUsd: number;
   numTurns: number;
   error?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  cacheReadTokens?: number;
+  cacheCreationTokens?: number;
+  model?: string;
 }
 
 // ── Workflow Config / Result ──
@@ -164,6 +169,11 @@ export interface AgentResult {
   costUsd: number;
   durationMs: number;
   numTurns: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  cacheReadTokens?: number;
+  cacheCreationTokens?: number;
+  model?: string;
 }
 
 // ── Verification ──

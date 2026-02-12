@@ -7,12 +7,35 @@
     "plynx": "dist/cli.js"
   },
   "type": "module",
+  "exports": {
+    ".": "./dist/cli.js"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pilotlynx/pilotlynx.git"
+  },
+  "homepage": "https://github.com/pilotlynx/pilotlynx#readme",
+  "bugs": {
+    "url": "https://github.com/pilotlynx/pilotlynx/issues"
+  },
+  "author": "PilotLynx Contributors",
+  "keywords": [
+    "cli",
+    "agent",
+    "claude",
+    "orchestration",
+    "workflow",
+    "scheduling",
+    "monorepo",
+    "ai"
+  ],
   "engines": {
     "node": ">=20.0.0"
   },
   "files": [
     "dist/",
+    "dist/prompts/",
     "template/",
     "LICENSE"
   ],
@@ -22,6 +45,7 @@
     "dev": "tsx src/cli.ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "lint": "tsc --noEmit",
     "clean": "rm -rf dist",
     "prepare": "npm run build",
@@ -29,16 +53,22 @@
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.37",
+    "@grammyjs/runner": "^2.0.3",
     "chalk": "^5.4.1",
+    "cli-table3": "^0.6.5",
     "commander": "^13.1.0",
     "croner": "^9.0.0",
     "dotenv": "^16.4.7",
     "env-paths": "^3.0.0",
+    "grammy": "^1.40.0",
+    "proper-lockfile": "^4.1.2",
     "yaml": "^2.7.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.12.0",
+    "@types/proper-lockfile": "^4.1.4",
+    "@vitest/coverage-v8": "^3.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"

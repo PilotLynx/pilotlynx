@@ -1,9 +1,12 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { existsSync, readFileSync } from 'node:fs';
+import { createInterface } from 'node:readline';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { resolve, join } from 'node:path';
-import { ENV_FILE, POLICIES_DIR } from '../lib/config.js';
+import { ENV_FILE, POLICIES_DIR, getProjectDir } from '../lib/config.js';
 import { executeProjectCreate, executeProjectAdd } from '../lib/command-ops/project-ops.js';
+import { unregisterProject, isRegistered } from '../lib/registry.js';
+import { loadScheduleConfig } from '../lib/schedule.js';
 
 function getSecretsContext(): { availableKeys: string[]; currentPolicy: string } {
   const envFile = ENV_FILE();
@@ -78,5 +81,62 @@ export function makeProjectCommand(): Command {
       }
     });
 
+  cmd
+    .command('remove')
+    .argument('<name>', 'project name to remove')
+    .option('--delete', 'also delete the project directory')
+    .description('Remove a project from the registry')
+    .action(async (name: string, opts) => {
+      if (!isRegistered(name)) {
+        console.error(chalk.red(`Project "${name}" is not registered.`));
+        process.exit(1);
+      }
+
+      // Warn about scheduled workflows
+      try {
+        const schedConfig = loadScheduleConfig(name);
+        if (schedConfig && schedConfig.schedules.length > 0) {
+          console.log(chalk.yellow(
+            `Warning: "${name}" has ${schedConfig.schedules.length} scheduled workflow(s) that will stop running.`
+          ));
+        }
+      } catch {
+        // No schedule config
+      }
+
+      const projectDir = getProjectDir(name);
+
+      if (opts.delete) {
+        console.log(chalk.yellow(`\nThis will permanently delete: ${projectDir}`));
+        const confirmed = await confirmAction('Type the project name to confirm deletion: ', name);
+        if (!confirmed) {
+          console.log(chalk.dim('Cancelled.'));
+          return;
+        }
+      }
+
+      unregisterProject(name);
+
+      if (opts.delete && existsSync(projectDir)) {
+        rmSync(projectDir, { recursive: true, force: true });
+        console.log(chalk.green(`Project "${name}" removed and directory deleted.`));
+      } else {
+        console.log(chalk.green(`Project "${name}" removed from registry.`));
+        if (!opts.delete) {
+          console.log(chalk.dim(`Directory left intact at: ${projectDir}`));
+        }
+      }
+    });
+
   return cmd;
+}
+
+function confirmAction(prompt: string, expected: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(prompt, (answer) => {
+      rl.close();
+      resolve(answer.trim() === expected);
+    });
+  });
 }

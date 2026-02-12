@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import { ENV_FILE, POLICIES_DIR } from './config.js';
 import { loadRootEnv } from './env-loader.js';
 import { loadPolicy } from './policy.js';
@@ -20,10 +21,13 @@ export function buildProjectEnv(projectName: string): Record<string, string> {
   ]);
 
   const result: Record<string, string> = {};
+  const missingKeys: string[] = [];
 
   for (const key of allowedSet) {
     if (key in allEnv) {
       result[key] = allEnv[key];
+    } else {
+      missingKeys.push(key);
     }
   }
 
@@ -31,8 +35,16 @@ export function buildProjectEnv(projectName: string): Record<string, string> {
     for (const [newKey, envKey] of Object.entries(projectPolicy.mappings)) {
       if (envKey in allEnv) {
         result[newKey] = allEnv[envKey];
+      } else if (!missingKeys.includes(envKey)) {
+        missingKeys.push(envKey);
       }
     }
+  }
+
+  if (missingKeys.length > 0) {
+    console.warn(chalk.yellow(
+      `[plynx] Warning: Policy for "${projectName}" references keys not found in .env: ${missingKeys.join(', ')}`
+    ));
   }
 
   return result;

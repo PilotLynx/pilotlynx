@@ -27,6 +27,10 @@ export function bashCommandEscapesDir(command: string, allowedDir: string): bool
   // Input redirects (can read arbitrary files)
   if (/\s<\s+\S/.test(command)) return true;
 
+  // Output redirects (can write to arbitrary locations)
+  if (/(?:^|[^<])>{1,2}\s*\S/.test(command)) return true;
+  if (/\d>\s*\S/.test(command)) return true;
+
   // Heredocs
   if (/<<-?\s*\S/.test(command)) return true;
 

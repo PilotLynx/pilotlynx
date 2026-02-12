@@ -81,16 +81,40 @@ export function makeInitCommand(): Command {
         writeFileSync(gitignorePath, gitignore, 'utf8');
       }
 
+      // Create default relay.yaml (disabled by default)
+      const relayConfigPath = join(configDir, 'relay.yaml');
+      if (!existsSync(relayConfigPath)) {
+        writeFileSync(relayConfigPath, YAML.stringify({
+          version: 1,
+          enabled: false,
+          channels: {
+            telegram: { enabled: false },
+            webhook: { enabled: false },
+          },
+          notifications: {
+            onScheduleComplete: true,
+            onScheduleFailure: true,
+          },
+          routing: {
+            defaultProject: null,
+            chats: {},
+            allowedUsers: [],
+          },
+        }), 'utf8');
+      }
+
       // Register globally so plynx works from any directory
       saveGlobalConfig(configDir);
 
       // Install cron job for schedule tick (every 15 min)
       let cronInstalled = false;
+      let cronError = false;
       try {
         const plynxBin = resolve(join(getPackageRoot(), 'dist', 'cli.js'));
         cronInstalled = installScheduleCron(`node ${plynxBin}`);
+        if (!cronInstalled) cronError = true;
       } catch {
-        // Crontab not available — skip silently
+        cronError = true;
       }
 
       console.log(chalk.green('Workspace initialized:'));
@@ -99,6 +123,7 @@ export function makeInitCommand(): Command {
       console.log(`  ${chalk.dim('registry')}  ${CONFIG_DIR_NAME}/projects.yaml`);
       console.log(`  ${chalk.dim('shared')}    ${CONFIG_DIR_NAME}/shared/`);
       console.log(`  ${chalk.dim('template')}  ${CONFIG_DIR_NAME}/template/`);
+      console.log(`  ${chalk.dim('relay')}      ${CONFIG_DIR_NAME}/relay.yaml`);
       if (cronInstalled) {
         console.log(`  ${chalk.dim('cron')}      schedule tick every 15 min (auto-improve daily)`);
       }
@@ -107,8 +132,10 @@ export function makeInitCommand(): Command {
       console.log(`  plynx project create <name>       Create a new project`);
       console.log(`  plynx project add <name> --path .  Add an existing directory`);
       if (!cronInstalled) {
-        console.log(`\n${chalk.yellow('Note:')} Could not install cron job. To enable scheduling, add manually:`);
-        console.log(`  */15 * * * * plynx schedule tick >> /tmp/plynx-tick.log 2>&1`);
+        console.log(chalk.yellow(`\n  Warning: Could not install cron job automatically.`));
+        console.log(chalk.yellow(`  Scheduled workflows will not run until a cron job is configured.`));
+        console.log(`\n  To enable scheduling, add this to your crontab (crontab -e):`);
+        console.log(chalk.dim(`  */15 * * * * plynx schedule tick >> /tmp/plynx-tick.log 2>&1`));
       }
     });
 

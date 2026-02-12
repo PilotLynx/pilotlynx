@@ -13,6 +13,7 @@ export function getRecentLogs(project: string, days: number): RunRecord[] {
 
   const files = readdirSync(logsDir).filter((f) => f.endsWith('.json'));
   const records: RunRecord[] = [];
+  let corruptCount = 0;
 
   for (const file of files) {
     try {
@@ -22,8 +23,14 @@ export function getRecentLogs(project: string, days: number): RunRecord[] {
         records.push(record);
       }
     } catch {
-      // skip invalid files
+      corruptCount++;
     }
+  }
+
+  if (corruptCount > 0) {
+    console.warn(
+      `[plynx] Warning: ${corruptCount} log entr${corruptCount === 1 ? 'y' : 'ies'} in "${project}" could not be parsed`
+    );
   }
 
   records.sort(

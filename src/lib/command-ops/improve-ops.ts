@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import chalk from 'chalk';
 import { listProjects } from '../project.js';
 import { getRecentLogs, writeInsight } from '../observation.js';
 import { getImproveAgentConfig } from '../../agents/improve.agent.js';
@@ -38,8 +39,14 @@ export async function executeImprove(verbose?: boolean): Promise<ImproveResult> 
     return { success: true, noActivity: true };
   }
 
-  const config = getImproveAgentConfig(logSummaries);
-  const result = await runAgent(config);
+  let result: Awaited<ReturnType<typeof runAgent>>;
+  try {
+    const config = getImproveAgentConfig(logSummaries);
+    result = await runAgent(config);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: `Improve agent failed: ${msg}` };
+  }
 
   if (!result.success) {
     return { success: false, error: result.result };
@@ -62,9 +69,7 @@ export async function executeImprove(verbose?: boolean): Promise<ImproveResult> 
 
     const workflowPath = join(getProjectDir(project), 'workflows', `${feedbackWorkflow}.ts`);
     if (!existsSync(workflowPath)) {
-      if (verbose) {
-        // Silently skip projects without the feedback workflow
-      }
+      console.log(chalk.dim(`[plynx] Skipping "${project}": no ${feedbackWorkflow} workflow found.`));
       continue;
     }
 

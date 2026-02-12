@@ -115,6 +115,28 @@ describe('bashCommandEscapesDir', () => {
     });
   });
 
+  describe('output redirect blocking', () => {
+    it('denies > redirect to file', () => {
+      expect(bashCommandEscapesDir('echo secret > /tmp/evil', projectDir)).toBe(true);
+    });
+
+    it('denies >> append redirect', () => {
+      expect(bashCommandEscapesDir('echo data >> /tmp/log', projectDir)).toBe(true);
+    });
+
+    it('denies 2> stderr redirect', () => {
+      expect(bashCommandEscapesDir('command 2> /tmp/errors', projectDir)).toBe(true);
+    });
+
+    it('denies > redirect to relative path', () => {
+      expect(bashCommandEscapesDir('echo test > output.txt', projectDir)).toBe(true);
+    });
+
+    it('denies redirect at start of command expression', () => {
+      expect(bashCommandEscapesDir('> /tmp/file echo test', projectDir)).toBe(true);
+    });
+  });
+
   describe('safe commands that should NOT be blocked', () => {
     it('allows echo with newline escape (not hex path)', () => {
       expect(bashCommandEscapesDir('echo "hello world"', projectDir)).toBe(false);

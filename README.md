@@ -1,5 +1,10 @@
 # PilotLynx
 
+[![npm version](https://img.shields.io/npm/v/pilotlynx.svg)](https://www.npmjs.com/package/pilotlynx)
+[![CI](https://github.com/pilotlynx/pilotlynx/actions/workflows/ci.yml/badge.svg)](https://github.com/pilotlynx/pilotlynx/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](https://nodejs.org/)
+
 Local monorepo orchestration for Claude Agent SDK workflows. One CLI to manage project scaffolding, policy-gated secrets, cron scheduling, and cross-project self-improvement.
 
 ## What Makes PilotLynx Different
@@ -101,6 +106,28 @@ plynx link myproject --direnv    # generate .envrc for MCP server ${VAR} expansi
 **Auto-migration:** When you adopt an existing project with `plynx project add`, PilotLynx detects secrets in the project's `.env` and `.mcp.json` literals, consolidates them into the central store, and updates the policy — no manual copy-paste.
 
 **Default is deny-all.** No policy file = zero secrets injected. See [`docs/secrets-and-mcp.md`](docs/secrets-and-mcp.md) for the full guide.
+
+## Why PilotLynx
+
+PilotLynx occupies a specific niche: **workspace-level orchestration of isolated Claude Agent SDK projects**. No single existing tool covers this combination. Here's how it compares:
+
+| Tool | What it solves | What PilotLynx adds |
+|------|---------------|---------------------|
+| [Claude Agent SDK](https://docs.anthropic.com/en/docs/agents) | Build individual AI agents in TypeScript | Multi-project orchestration, scaffolding, shared secrets, scheduling |
+| [OpenClaw](https://github.com/openclaw/openclaw) | General-purpose personal AI assistant (email, calendar, web) with 20+ messaging integrations | Developer-focused CLI for code projects, policy-gated secrets, template-based scaffolding, cross-project self-improvement |
+| [CrewAI](https://github.com/crewAIInc/crewAI) | Multi-agent collaboration with role-based agents (Python) | File-based durable state in git, project isolation, TypeScript-native with Agent SDK |
+| [LangGraph](https://github.com/langchain-ai/langgraph) | Stateful multi-step agent graphs | Workspace-level concerns: secrets policy, cron scheduling, cross-project insights |
+| [Turborepo](https://turbo.build/repo) | Monorepo build orchestration and caching | AI workflow orchestration, not build — schedules agents, injects secrets, tracks run logs |
+| [AgentStack](https://github.com/AgentOps-AI/AgentStack) | Scaffolding for CrewAI/LangGraph projects | Claude Agent SDK native, multi-project workspace, self-improvement loop |
+| [Infisical](https://infisical.com/) | Secrets management platform | Lightweight file-based secrets with per-project allowlists, no external service |
+
+**What PilotLynx uniquely combines:**
+- CLI-first developer workflow (not conversation-first, not GUI-first)
+- Claude Agent SDK native — every CLI command is an agent
+- Multi-project isolation with shared infrastructure (secrets, policies, insights)
+- Tick-based cron scheduling with catch-up policies
+- Cross-project self-improvement loop
+- All state in committed files — no database, no external service
 
 ## Requirements
 
@@ -298,6 +325,14 @@ Each project should support these baseline workflows:
 - `plynx` works from the workspace root, from project directories (via global config), and from any other location.
 - `plynx link --direnv` generates `.envrc` for MCP servers that need secrets via `${VAR}` expansion.
 - Each CLI command maps to a Claude Code skill — same agent, same behavior.
+
+## Design Decisions
+
+**Minimal dependencies (11 total).** Each dependency earns its place: `commander` for CLI parsing, `chalk` for terminal colors, `cli-table3` for table output, `croner` for cron parsing, `yaml`/`zod` for config, `dotenv` for secrets loading, `env-paths` for OS-appropriate config paths, `proper-lockfile` for concurrent tick safety, `grammy` for Telegram relay, and `@anthropic-ai/claude-agent-sdk` for the core runtime. No ORMs, no template engines, no framework overhead.
+
+**File-based state over databases.** All state — project briefs, runbooks, skills, memory, run logs, schedule state — lives in committed files. This makes workspaces portable, git-friendly, and inspectable with standard tools. No database to provision or migrate.
+
+**Simple template interpolation over template engines.** Project scaffolding uses direct file copying with string replacement rather than Handlebars/EJS/etc. This avoids a class of injection vulnerabilities and keeps templates readable as plain files.
 
 ## License
 

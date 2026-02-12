@@ -35,9 +35,17 @@ export async function executeRun(
   }
 
   const startedAt = new Date().toISOString();
-  const projectEnv = buildProjectEnv(project);
-  const config = getRunAgentConfig(project, workflow, projectEnv, feedbackPrompt);
-  const result = await runAgent(config);
+
+  let result: Awaited<ReturnType<typeof runAgent>>;
+  try {
+    const projectEnv = buildProjectEnv(project);
+    const config = getRunAgentConfig(project, workflow, projectEnv, feedbackPrompt);
+    result = await runAgent(config);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: `Agent execution failed: ${msg}` };
+  }
+
   const completedAt = new Date().toISOString();
 
   const record: RunRecord = {
@@ -50,6 +58,11 @@ export async function executeRun(
     costUsd: result.costUsd,
     numTurns: result.numTurns,
     ...(result.success ? {} : { error: result.result }),
+    ...(result.inputTokens !== undefined && { inputTokens: result.inputTokens }),
+    ...(result.outputTokens !== undefined && { outputTokens: result.outputTokens }),
+    ...(result.cacheReadTokens !== undefined && { cacheReadTokens: result.cacheReadTokens }),
+    ...(result.cacheCreationTokens !== undefined && { cacheCreationTokens: result.cacheCreationTokens }),
+    ...(result.model && { model: result.model }),
   };
 
   writeRunLog(project, record);

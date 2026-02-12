@@ -15,6 +15,10 @@ import { makeLinkCommand } from './commands/link.js';
 import { makeUnlinkCommand } from './commands/unlink.js';
 import { makeLogsCommand } from './commands/logs.js';
 import { makeInsightsCommand } from './commands/insights.js';
+import { makeRelayCommand } from './commands/relay.js';
+import { makeStatusCommand } from './commands/status.js';
+import { makeCostCommand } from './commands/cost.js';
+import { makeDoctorCommand } from './commands/doctor.js';
 
 const program = new Command();
 
@@ -43,6 +47,10 @@ program.addCommand(makeLinkCommand());
 program.addCommand(makeUnlinkCommand());
 program.addCommand(makeLogsCommand());
 program.addCommand(makeInsightsCommand());
+program.addCommand(makeRelayCommand());
+program.addCommand(makeStatusCommand());
+program.addCommand(makeCostCommand());
+program.addCommand(makeDoctorCommand());
 
 try {
   await program.parseAsync(process.argv);

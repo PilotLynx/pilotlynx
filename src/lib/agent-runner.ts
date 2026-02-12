@@ -11,6 +11,20 @@ interface SDKMessage {
   total_cost_usd?: number;
   num_turns?: number;
   structured_output?: unknown;
+  model?: string;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    cache_read_input_tokens?: number;
+    cache_creation_input_tokens?: number;
+  };
+  /** Per-model breakdowns provided by the SDK result message */
+  model_usage?: Record<string, {
+    input_tokens?: number;
+    output_tokens?: number;
+    cache_read_input_tokens?: number;
+    cache_creation_input_tokens?: number;
+  }>;
 }
 
 /**
@@ -57,6 +71,11 @@ export async function runAgent(
   let costUsd = 0;
   let numTurns = 0;
   let success = false;
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let cacheReadTokens = 0;
+  let cacheCreationTokens = 0;
+  let model: string | undefined;
 
   const runtimeEnv = config.env ? buildRuntimeEnv(config.env) : undefined;
 
@@ -101,6 +120,24 @@ export async function runAgent(
       if (msg.type === 'result') {
         costUsd = msg.total_cost_usd ?? 0;
         numTurns = msg.num_turns ?? 0;
+
+        // Extract token usage from model_usage (per-model breakdown) or usage
+        if (msg.model_usage) {
+          for (const [modelId, usage] of Object.entries(msg.model_usage)) {
+            if (!model) model = modelId;
+            inputTokens += usage.input_tokens ?? 0;
+            outputTokens += usage.output_tokens ?? 0;
+            cacheReadTokens += usage.cache_read_input_tokens ?? 0;
+            cacheCreationTokens += usage.cache_creation_input_tokens ?? 0;
+          }
+        } else if (msg.usage) {
+          inputTokens = msg.usage.input_tokens ?? 0;
+          outputTokens = msg.usage.output_tokens ?? 0;
+          cacheReadTokens = msg.usage.cache_read_input_tokens ?? 0;
+          cacheCreationTokens = msg.usage.cache_creation_input_tokens ?? 0;
+        }
+        if (msg.model) model = msg.model;
+
         if (msg.subtype === 'success') {
           success = true;
           resultText = msg.result ?? resultText;
@@ -123,5 +160,10 @@ export async function runAgent(
     costUsd,
     durationMs: Date.now() - start,
     numTurns,
+    ...(inputTokens > 0 && { inputTokens }),
+    ...(outputTokens > 0 && { outputTokens }),
+    ...(cacheReadTokens > 0 && { cacheReadTokens }),
+    ...(cacheCreationTokens > 0 && { cacheCreationTokens }),
+    ...(model && { model }),
   };
 }
