@@ -1,6 +1,6 @@
 import { readdirSync, existsSync, cpSync, readFileSync, writeFileSync, statSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { PROJECTS_DIR, TEMPLATE_DIR, getProjectDir, CONFIG_DIR_NAME } from './config.js';
+import { TEMPLATE_DIR, getProjectDir, CONFIG_DIR_NAME } from './config.js';
 import { getRegisteredProjects, isRegistered, registerProject } from './registry.js';
 import type { VerificationResult } from './types.js';
 
@@ -20,7 +20,7 @@ export function createProjectFromTemplate(name: string): void {
     throw new Error(`"${CONFIG_DIR_NAME}" is reserved and cannot be used as a project name`);
   }
 
-  const projectDir = join(PROJECTS_DIR(), name);
+  const projectDir = join(process.cwd(), name);
   if (existsSync(projectDir)) {
     throw new Error(`Project "${name}" already exists at ${projectDir}`);
   }

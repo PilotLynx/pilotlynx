@@ -1,6 +1,6 @@
 {
   "name": "pilotlynx",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Local monorepo orchestration layer for running Claude Agent SDK workflows across isolated projects",
   "bin": {
     "pilotlynx": "dist/cli.js",

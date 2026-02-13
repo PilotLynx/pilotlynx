@@ -66,9 +66,10 @@ describe('project utilities', () => {
 
     it('returns false for registered project with missing directory', () => {
       // Register a path that doesn't exist on disk
+      const ghostPath = join(tmpDir, 'ghost');
       writeFileSync(
         join(configDir, 'projects.yaml'),
-        'version: 1\nprojects:\n  ghost:\n    path: ghost\n'
+        `version: 1\nprojects:\n  ghost:\n    path: ${ghostPath}\n`
       );
       resetRegistryCache();
       expect(projectExists('ghost')).toBe(false);
@@ -82,6 +83,10 @@ describe('project utilities', () => {
   });
 
   describe('createProjectFromTemplate', () => {
+    const origCwd = process.cwd();
+    beforeEach(() => process.chdir(tmpDir));
+    afterEach(() => process.chdir(origCwd));
+
     it('creates project directory with template files and registers it', () => {
       createProjectFromTemplate('newproj');
       const projDir = join(tmpDir, 'newproj');
@@ -163,10 +168,16 @@ describe('project utilities', () => {
 
   describe('verifyProject', () => {
     it('validates a correct project', () => {
-      createProjectFromTemplate('valid');
-      const result = verifyProject('valid');
-      expect(result.valid).toBe(true);
-      expect(result.errors).toHaveLength(0);
+      const origCwd = process.cwd();
+      process.chdir(tmpDir);
+      try {
+        createProjectFromTemplate('valid');
+        const result = verifyProject('valid');
+        expect(result.valid).toBe(true);
+        expect(result.errors).toHaveLength(0);
+      } finally {
+        process.chdir(origCwd);
+      }
     });
 
     it('detects missing required files', () => {

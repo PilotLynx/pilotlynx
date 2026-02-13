@@ -1,5 +1,5 @@
 import type { AgentConfig, CanUseToolResult } from '../lib/types.js';
-import { getWorkspaceRoot, SHARED_DIR, ENV_FILE } from '../lib/config.js';
+import { getConfigRoot, SHARED_DIR, ENV_FILE } from '../lib/config.js';
 import { loadPrompt, loadSystemPrompt } from '../lib/prompts.js';
 import { resolve, dirname } from 'node:path';
 
@@ -28,7 +28,7 @@ export function getImproveAgentConfig(logSummaries: Record<string, string>): Age
 
   return {
     prompt: loadPrompt('improve', 'improve_analyze', { summaryText }),
-    cwd: getWorkspaceRoot(),
+    cwd: getConfigRoot(),
     allowedTools: ['Read', 'Glob', 'Grep'],
     // Intentional: uses string systemPrompt (not preset 'claude_code') because
     // this agent is read-only and doesn't need CLAUDE.md context or Claude Code tools.

@@ -85,20 +85,8 @@ export function getConfigRoot(): string {
   );
 }
 
-// ── Workspace Root ──
-
-/**
- * The workspace root is the parent of the config root.
- * This is where projects live as sibling directories.
- */
-export function getWorkspaceRoot(): string {
-  return dirname(getConfigRoot());
-}
-
 // ── Path constants ──
 
-/** Default location for new projects (workspace root, siblings of pilotlynx/) */
-export const PROJECTS_DIR = () => getWorkspaceRoot();
 export const SHARED_DIR = () => join(getConfigRoot(), 'shared');
 export const POLICIES_DIR = () => join(getConfigRoot(), 'shared', 'policies');
 export const INSIGHTS_DIR = () => join(getConfigRoot(), 'shared', 'insights');

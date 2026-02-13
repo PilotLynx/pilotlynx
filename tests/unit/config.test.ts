@@ -6,7 +6,6 @@ import YAML from 'yaml';
 import {
   resetConfigCache,
   getPackageRoot,
-  getWorkspaceRoot,
   getConfigRoot,
   getVersion,
   TEMPLATE_DIR,
@@ -119,19 +118,6 @@ describe('config', () => {
       resetGlobalConfigCache();
 
       expect(() => getConfigRoot()).toThrow('Could not find PilotLynx config');
-    });
-  });
-
-  describe('getWorkspaceRoot', () => {
-    it('returns parent of config root', () => {
-      const dir = mkdtempSync(join(tmpdir(), 'plynx-wsroot-'));
-      const configDir = join(dir, CONFIG_DIR_NAME);
-      mkdirSync(configDir, { recursive: true });
-      process.env.PILOTLYNX_ROOT = configDir;
-      resetConfigCache();
-
-      expect(getWorkspaceRoot()).toBe(dir);
-      rmSync(dir, { recursive: true, force: true });
     });
   });
 

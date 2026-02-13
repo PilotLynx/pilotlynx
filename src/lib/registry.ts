@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { join, relative, isAbsolute, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
-import { getConfigRoot, getWorkspaceRoot } from './config.js';
+import { getConfigRoot } from './config.js';
 import { ProjectRegistrySchema, type ProjectRegistry } from './types.js';
 import { validateProjectName } from './validation.js';
 
@@ -49,22 +49,14 @@ export function registerProject(name: string, absolutePath: string): void {
   // Check for duplicate paths
   const resolvedNew = resolve(absolutePath);
   for (const [existingName, entry] of Object.entries(registry.projects)) {
-    const existingAbs = isAbsolute(entry.path)
-      ? entry.path
-      : join(getWorkspaceRoot(), entry.path);
-    if (resolve(existingAbs) === resolvedNew) {
+    if (resolve(entry.path) === resolvedNew) {
       throw new Error(
         `Path "${absolutePath}" is already registered as project "${existingName}"`
       );
     }
   }
 
-  // Store relative if under workspace root, absolute otherwise
-  const wsRoot = getWorkspaceRoot();
-  const rel = relative(wsRoot, resolvedNew);
-  const storedPath = rel.startsWith('..') || isAbsolute(rel) ? resolvedNew : rel;
-
-  registry.projects[name] = { path: storedPath };
+  registry.projects[name] = { path: resolvedNew };
   saveRegistry(registry);
 }
 
@@ -85,8 +77,7 @@ export function resolveProjectPath(name: string): string {
       `Project "${name}" is not registered. Run \`pilotlynx add ${name}\` to register it.`
     );
   }
-  if (isAbsolute(entry.path)) return entry.path;
-  return join(getWorkspaceRoot(), entry.path);
+  return entry.path;
 }
 
 export function isRegistered(name: string): boolean {
@@ -97,13 +88,9 @@ export function isRegistered(name: string): boolean {
 export function getRegisteredProjects(): Record<string, { path: string; absolutePath: string }> {
   const registry = loadRegistry();
   const result: Record<string, { path: string; absolutePath: string }> = {};
-  const wsRoot = getWorkspaceRoot();
 
   for (const [name, entry] of Object.entries(registry.projects)) {
-    const absolutePath = isAbsolute(entry.path)
-      ? entry.path
-      : join(wsRoot, entry.path);
-    result[name] = { path: entry.path, absolutePath };
+    result[name] = { path: entry.path, absolutePath: entry.path };
   }
 
   return result;

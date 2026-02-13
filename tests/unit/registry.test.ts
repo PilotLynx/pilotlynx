@@ -74,7 +74,7 @@ describe('registry', () => {
       resetRegistryCache();
       const reg = loadRegistry();
       expect(reg.projects.myapp).toBeDefined();
-      expect(reg.projects.myapp.path).toBe('myapp');
+      expect(reg.projects.myapp.path).toBe(projDir);
     });
 
     it('throws on duplicate name', () => {
@@ -95,16 +95,16 @@ describe('registry', () => {
       expect(() => registerProject('name2', projDir)).toThrow('already registered as project');
     });
 
-    it('stores relative path when under workspace root', () => {
+    it('always stores absolute path', () => {
       const projDir = join(tmpDir, 'localproj');
       mkdirSync(projDir, { recursive: true });
       registerProject('localproj', projDir);
 
       const reg = loadRegistry();
-      expect(reg.projects.localproj.path).toBe('localproj');
+      expect(reg.projects.localproj.path).toBe(projDir);
     });
 
-    it('stores absolute path when outside workspace root', () => {
+    it('stores absolute path for external directories', () => {
       const externalDir = mkdtempSync(join(tmpdir(), 'plynx-external-'));
       registerProject('external', externalDir);
 
@@ -181,7 +181,7 @@ describe('registry', () => {
 
       const projects = getRegisteredProjects();
       expect(projects.myapp).toBeDefined();
-      expect(projects.myapp.path).toBe('myapp');
+      expect(projects.myapp.path).toBe(projDir);
       expect(projects.myapp.absolutePath).toBe(projDir);
     });
   });
