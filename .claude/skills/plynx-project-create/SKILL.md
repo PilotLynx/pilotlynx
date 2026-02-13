@@ -8,5 +8,5 @@ allowed-tools: Bash
 Create a new PilotLynx project:
 
 ```bash
-npx plynx project create $ARGUMENTS
+npx pilotlynx create $ARGUMENTS
 ```

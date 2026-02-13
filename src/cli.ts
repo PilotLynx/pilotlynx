@@ -2,8 +2,8 @@
 
 import { Command } from 'commander';
 import { getVersion } from './lib/config.js';
-import { makeProjectCommand } from './commands/project.js';
-import { makeProjectsCommand } from './commands/projects.js';
+import { makeCreateCommand, makeAddCommand, makeRemoveCommand } from './commands/project.js';
+import { makeListCommand } from './commands/projects.js';
 import { makeRunCommand } from './commands/run.js';
 import { makeVerifyCommand } from './commands/verify.js';
 import { makeImproveCommand } from './commands/improve.js';
@@ -34,9 +34,13 @@ program.option('--verbose', 'enable verbose output');
 // Commands that work without a workspace
 program.addCommand(makeInitCommand());
 
-// Commands that require a workspace
-program.addCommand(makeProjectCommand());
-program.addCommand(makeProjectsCommand());
+// Project management (top-level — plynx manages projects by default)
+program.addCommand(makeCreateCommand());
+program.addCommand(makeAddCommand());
+program.addCommand(makeRemoveCommand());
+program.addCommand(makeListCommand());
+
+// Workspace commands
 program.addCommand(makeScheduleCommand());
 program.addCommand(makeSyncCommand());
 program.addCommand(makeRunCommand());

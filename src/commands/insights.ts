@@ -13,7 +13,7 @@ export function makeInsightsCommand(): Command {
       const dir = INSIGHTS_DIR();
 
       if (!existsSync(dir)) {
-        console.log(chalk.dim('No insights directory found. Run `plynx improve` to generate insights.'));
+        console.log(chalk.dim('No insights directory found. Run `pilotlynx improve` to generate insights.'));
         return;
       }
 
@@ -22,7 +22,7 @@ export function makeInsightsCommand(): Command {
         .sort();
 
       if (files.length === 0) {
-        console.log(chalk.dim('No insights found. Run `plynx improve` to generate insights.'));
+        console.log(chalk.dim('No insights found. Run `pilotlynx improve` to generate insights.'));
         return;
       }
 

@@ -8,7 +8,7 @@ allowed-tools: Bash
 View recent workflow logs:
 
 ```bash
-npx plynx logs $ARGUMENTS
+npx pilotlynx logs $ARGUMENTS
 ```
 
 Options: `--last <n>` (default 10), `--workflow <name>` to filter, `--failures` for failed runs only.

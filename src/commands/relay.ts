@@ -120,7 +120,7 @@ export function makeRelayCommand(): Command {
         }
         installService();
         console.log(chalk.green('Relay service installed and started.'));
-        console.log(chalk.dim('Use `plynx relay status` to check.'));
+        console.log(chalk.dim('Use `pilotlynx relay status` to check.'));
       } catch (err) {
         console.error(chalk.red(err instanceof Error ? err.message : String(err)));
         process.exit(1);

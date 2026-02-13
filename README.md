@@ -143,6 +143,12 @@ PilotLynx occupies a specific niche: **workspace-level orchestration of isolated
 npm install -g pilotlynx
 ```
 
+> **Permission denied?** If you see `EACCES` errors, either prefix with `sudo` or (recommended) use a Node version manager like [nvm](https://github.com/nvm-sh/nvm) / [fnm](https://github.com/Schniz/fnm) which installs to user-owned directories. You can also run without installing globally:
+>
+> ```bash
+> npx pilotlynx <command>
+> ```
+
 ## Quick Start
 
 ### 1. Create a workspace

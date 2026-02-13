@@ -82,7 +82,7 @@ export function resolveProjectPath(name: string): string {
   const entry = registry.projects[name];
   if (!entry) {
     throw new Error(
-      `Project "${name}" is not registered. Run \`plynx project add ${name}\` to register it.`
+      `Project "${name}" is not registered. Run \`pilotlynx add ${name}\` to register it.`
     );
   }
   if (isAbsolute(entry.path)) return entry.path;

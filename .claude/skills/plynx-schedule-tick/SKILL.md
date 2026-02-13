@@ -7,5 +7,5 @@ allowed-tools: Bash
 Run scheduled workflow evaluation:
 
 ```bash
-npx plynx schedule tick
+npx pilotlynx schedule tick
 ```

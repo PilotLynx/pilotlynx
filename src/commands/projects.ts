@@ -2,18 +2,15 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { getRegisteredProjects } from '../lib/registry.js';
 
-export function makeProjectsCommand(): Command {
-  const cmd = new Command('projects').description('List and manage projects');
-
-  cmd
-    .command('list')
+export function makeListCommand(): Command {
+  return new Command('list')
     .description('List all projects')
     .action(async () => {
       const projects = getRegisteredProjects();
       const names = Object.keys(projects);
 
       if (names.length === 0) {
-        console.log(chalk.yellow('No projects found. Create one with: plynx project create <name>'));
+        console.log(chalk.yellow('No projects found. Create one with: pilotlynx create <name>'));
         return;
       }
 
@@ -24,6 +21,4 @@ export function makeProjectsCommand(): Command {
       }
       console.log(`\n${chalk.dim(`${names.length} project(s)`)}`);
     });
-
-  return cmd;
 }

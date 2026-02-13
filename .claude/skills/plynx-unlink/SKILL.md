@@ -8,7 +8,7 @@ allowed-tools: Bash
 Remove direct-access configuration:
 
 ```bash
-npx plynx unlink $ARGUMENTS
+npx pilotlynx unlink $ARGUMENTS
 ```
 
 Removes PILOTLYNX_ROOT from `.claude/settings.json` and deletes `.envrc` if present.

@@ -27,11 +27,8 @@ function getSecretsContext(): { availableKeys: string[]; currentPolicy: string }
   return { availableKeys, currentPolicy };
 }
 
-export function makeProjectCommand(): Command {
-  const cmd = new Command('project').description('Manage individual projects');
-
-  cmd
-    .command('create')
+export function makeCreateCommand(): Command {
+  return new Command('create')
     .argument('<name>', 'name of the new project')
     .description('Create a new project from the template')
     .action(async (name: string) => {
@@ -43,20 +40,21 @@ export function makeProjectCommand(): Command {
       if (result.success) {
         console.log(chalk.green(`\nProject "${name}" created successfully.`));
         console.log(chalk.dim(`\nTip: For MCP secrets when working directly in this project:`));
-        console.log(chalk.dim(`  plynx link ${name} --direnv    # generates .envrc for direnv`));
+        console.log(chalk.dim(`  pilotlynx link ${name} --direnv    # generates .envrc for direnv`));
       } else {
         console.error(chalk.red(`\nProject creation encountered issues: ${result.error}`));
         process.exit(1);
       }
     });
+}
 
-  cmd
-    .command('add')
+export function makeAddCommand(): Command {
+  return new Command('add')
     .argument('<name>', 'name for the project in PilotLynx')
-    .option('--path <dir>', 'path to existing directory (default: current directory)')
+    .argument('[path]', 'path to existing directory', '.')
     .description('Add an existing directory as a PilotLynx project')
-    .action(async (name: string, opts) => {
-      const targetPath = resolve(opts.path ?? '.');
+    .action(async (name: string, path: string) => {
+      const targetPath = resolve(path);
       console.log(chalk.blue(`Adding project: ${name} from ${targetPath}`));
 
       const { availableKeys, currentPolicy } = getSecretsContext();
@@ -74,15 +72,16 @@ export function makeProjectCommand(): Command {
       if (result.success) {
         console.log(chalk.green(`\nProject "${name}" added successfully.`));
         console.log(chalk.dim(`\nTip: For MCP secrets when working directly in this project:`));
-        console.log(chalk.dim(`  plynx link ${name} --direnv    # generates .envrc for direnv`));
+        console.log(chalk.dim(`  pilotlynx link ${name} --direnv    # generates .envrc for direnv`));
       } else {
         console.error(chalk.red(`\nProject addition encountered issues: ${result.error}`));
         process.exit(1);
       }
     });
+}
 
-  cmd
-    .command('remove')
+export function makeRemoveCommand(): Command {
+  return new Command('remove')
     .argument('<name>', 'project name to remove')
     .option('--delete', 'also delete the project directory')
     .description('Remove a project from the registry')
@@ -127,8 +126,6 @@ export function makeProjectCommand(): Command {
         }
       }
     });
-
-  return cmd;
 }
 
 function confirmAction(prompt: string, expected: string): Promise<boolean> {

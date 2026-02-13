@@ -8,5 +8,5 @@ allowed-tools: Bash
 Run a PilotLynx workflow:
 
 ```bash
-npx plynx run $ARGUMENTS
+npx pilotlynx run $ARGUMENTS
 ```

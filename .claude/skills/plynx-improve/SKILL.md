@@ -7,5 +7,5 @@ allowed-tools: Bash
 Run the PilotLynx improvement cycle:
 
 ```bash
-npx plynx improve
+npx pilotlynx improve
 ```

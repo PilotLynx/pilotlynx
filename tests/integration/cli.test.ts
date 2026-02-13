@@ -63,7 +63,8 @@ describe('CLI integration', () => {
     const { output, exitCode } = runCli(['--help']);
     expect(exitCode).toBe(0);
     expect(output).toContain('PilotLynx');
-    expect(output).toContain('project');
+    expect(output).toContain('create');
+    expect(output).toContain('add');
     expect(output).toContain('run');
     expect(output).toContain('verify');
     expect(output).toContain('improve');
@@ -76,8 +77,8 @@ describe('CLI integration', () => {
     expect(output.trim()).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
-  it('projects list runs without error', () => {
-    const { exitCode } = runCli(['projects', 'list'], wsEnv());
+  it('list runs without error', () => {
+    const { exitCode } = runCli(['list'], wsEnv());
     expect(exitCode).toBe(0);
   });
 
@@ -88,8 +89,8 @@ describe('CLI integration', () => {
   });
 
   it('unknown command shows suggestion', () => {
-    const { output } = runCli(['projec']);
-    expect(output).toContain('project');
+    const { output } = runCli(['creat']);
+    expect(output).toContain('create');
   });
 
   it('init creates a workspace with pilotlynx/ dir and projects.yaml', () => {
@@ -111,8 +112,8 @@ describe('CLI integration', () => {
     rmSync(initDir, { recursive: true, force: true });
   });
 
-  it('project add --help shows usage', () => {
-    const { output, exitCode } = runCli(['project', 'add', '--help']);
+  it('add --help shows usage', () => {
+    const { output, exitCode } = runCli(['add', '--help']);
     expect(exitCode).toBe(0);
     expect(output).toContain('existing directory');
   });

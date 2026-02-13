@@ -36,7 +36,7 @@ export function installScheduleCron(plynxBin: string): boolean {
 
   const entry = [
     MARKER_START,
-    `*/15 * * * * ${plynxBin} schedule tick >> /tmp/plynx-tick.log 2>&1`,
+    `*/15 * * * * ${plynxBin} schedule tick >> /tmp/pilotlynx-tick.log 2>&1`,
     MARKER_END,
   ].join('\n');
 

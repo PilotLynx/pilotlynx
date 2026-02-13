@@ -59,7 +59,7 @@ export function createRouter(adapter: ChannelAdapter) {
         msg.chatId,
         `Your chat ID is \`${rawId}\`.\n\n` +
         `Run this to connect:\n` +
-        `\`plynx relay add-chat ${rawId} --project <name>\``,
+        `\`pilotlynx relay add-chat ${rawId} --project <name>\``,
       );
       return;
     }

@@ -7,5 +7,5 @@ allowed-tools: Bash
 List all PilotLynx projects:
 
 ```bash
-npx plynx projects list
+npx pilotlynx list
 ```

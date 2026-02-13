@@ -81,7 +81,7 @@ export function getConfigRoot(): string {
 
   throw new Error(
     'Could not find PilotLynx config.\n' +
-    '  Run `plynx init` to create a workspace.'
+    '  Run `pilotlynx init` to create a workspace.'
   );
 }
 

@@ -8,7 +8,7 @@ allowed-tools: Bash
 Output policy-filtered secrets for a project:
 
 ```bash
-npx plynx env $ARGUMENTS
+npx pilotlynx env $ARGUMENTS
 ```
 
 Formats: default (dotenv), `--export` (eval-able), `--json`, `--envrc` (includes PILOTLYNX_ROOT). Only secrets permitted by the project's policy are included.

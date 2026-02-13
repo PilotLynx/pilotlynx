@@ -8,5 +8,5 @@ allowed-tools: Bash
 Verify a PilotLynx project:
 
 ```bash
-npx plynx verify $ARGUMENTS
+npx pilotlynx verify $ARGUMENTS
 ```

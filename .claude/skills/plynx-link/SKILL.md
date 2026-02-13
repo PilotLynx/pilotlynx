@@ -8,7 +8,7 @@ allowed-tools: Bash
 Link a project for direct access:
 
 ```bash
-npx plynx link $ARGUMENTS
+npx pilotlynx link $ARGUMENTS
 ```
 
 Sets PILOTLYNX_ROOT in `.claude/settings.json`. With `--direnv`, also generates `.envrc` with policy-filtered secrets for MCP server `${VAR}` expansion.

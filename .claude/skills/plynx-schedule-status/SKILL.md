@@ -8,7 +8,7 @@ allowed-tools: Bash
 Show schedule status:
 
 ```bash
-npx plynx schedule status $ARGUMENTS
+npx pilotlynx schedule status $ARGUMENTS
 ```
 
 Displays configured schedules with last/next run times and auto-improve state.

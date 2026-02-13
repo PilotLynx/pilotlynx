@@ -28,7 +28,7 @@ export function runDoctorChecks(): CheckResult[] {
       name: 'Global config',
       status: 'warn',
       message: 'Not found',
-      suggestion: 'Run `plynx init` to create a workspace and register it globally.',
+      suggestion: 'Run `pilotlynx init` to create a workspace and register it globally.',
     });
   }
 
@@ -52,7 +52,7 @@ export function runDoctorChecks(): CheckResult[] {
       name: 'Config root',
       status: 'fail',
       message: 'Could not resolve config root',
-      suggestion: 'Run `plynx init` to create a workspace.',
+      suggestion: 'Run `pilotlynx init` to create a workspace.',
     });
     return checks;
   }
@@ -66,7 +66,7 @@ export function runDoctorChecks(): CheckResult[] {
       name: 'Workspace marker',
       status: 'fail',
       message: 'plynx.yaml not found in config root',
-      suggestion: 'Config root may be corrupt. Re-run `plynx init`.',
+      suggestion: 'Config root may be corrupt. Re-run `pilotlynx init`.',
     });
   }
 
@@ -104,7 +104,7 @@ export function runDoctorChecks(): CheckResult[] {
         name: 'Project registry',
         status: 'warn',
         message: `Missing directories: ${missing.join(', ')}`,
-        suggestion: `Remove stale entries with \`plynx project remove <name>\` or recreate the directories.`,
+        suggestion: `Remove stale entries with \`pilotlynx remove <name>\` or recreate the directories.`,
       });
     }
   } catch (err) {
@@ -167,13 +167,13 @@ export function runDoctorChecks(): CheckResult[] {
   // 8. Cron job installed
   try {
     if (isScheduleCronInstalled()) {
-      checks.push({ name: 'Cron job', status: 'pass', message: 'plynx schedule tick installed' });
+      checks.push({ name: 'Cron job', status: 'pass', message: 'pilotlynx schedule tick installed' });
     } else {
       checks.push({
         name: 'Cron job',
         status: 'warn',
         message: 'Not installed',
-        suggestion: 'Install with: */15 * * * * plynx schedule tick >> /tmp/plynx-tick.log 2>&1',
+        suggestion: 'Install with: */15 * * * * pilotlynx schedule tick >> /tmp/pilotlynx-tick.log 2>&1',
       });
     }
   } catch {
@@ -194,7 +194,7 @@ export function runDoctorChecks(): CheckResult[] {
       name: 'Template directory',
       status: 'warn',
       message: 'Not found in config root',
-      suggestion: 'Run `plynx init` or copy the bundled template to pilotlynx/template/.',
+      suggestion: 'Run `pilotlynx init` or copy the bundled template to pilotlynx/template/.',
     });
   }
 

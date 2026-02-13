@@ -8,5 +8,5 @@ allowed-tools: Bash
 Sync template to a project:
 
 ```bash
-npx plynx sync template $ARGUMENTS
+npx pilotlynx sync template $ARGUMENTS
 ```

@@ -129,13 +129,13 @@ export function makeInitCommand(): Command {
       }
       console.log('');
       console.log(chalk.blue('Next steps:'));
-      console.log(`  plynx project create <name>       Create a new project`);
-      console.log(`  plynx project add <name> --path .  Add an existing directory`);
+      console.log(`  pilotlynx create <name>    Create a new project`);
+      console.log(`  pilotlynx add <name>       Add an existing directory`);
       if (!cronInstalled) {
         console.log(chalk.yellow(`\n  Warning: Could not install cron job automatically.`));
         console.log(chalk.yellow(`  Scheduled workflows will not run until a cron job is configured.`));
         console.log(`\n  To enable scheduling, add this to your crontab (crontab -e):`);
-        console.log(chalk.dim(`  */15 * * * * plynx schedule tick >> /tmp/plynx-tick.log 2>&1`));
+        console.log(chalk.dim(`  */15 * * * * pilotlynx schedule tick >> /tmp/pilotlynx-tick.log 2>&1`));
       }
     });
 

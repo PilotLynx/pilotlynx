@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
+import { getPackageRoot } from './config.js';
 
 interface PromptFile {
   prompts: Record<string, string>;
@@ -11,9 +11,7 @@ interface PromptFile {
 const cache = new Map<string, PromptFile>();
 
 function getPromptsDir(): string {
-  const thisFile = fileURLToPath(import.meta.url);
-  // Works in both lynx/src/lib/ (dev) and dist/lib/ (compiled)
-  return join(dirname(thisFile), '..', 'prompts');
+  return join(getPackageRoot(), 'prompts');
 }
 
 function loadFile(agent: string): PromptFile {
@@ -31,7 +29,7 @@ function loadFile(agent: string): PromptFile {
 }
 
 function interpolate(template: string, vars: Record<string, string>): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (match, key: string) => {
+  return template.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => {
     if (!(key in vars)) {
       throw new Error(`Missing prompt variable: {{${key}}}`);
     }

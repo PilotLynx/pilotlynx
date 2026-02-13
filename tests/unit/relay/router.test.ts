@@ -151,7 +151,7 @@ describe('router', () => {
     const adapter = createMockAdapter();
     const router = createRouter(adapter);
     await router(makeMsg({ chatId: 'telegram:999', text: '/help' }));
-    expect(adapter.send).toHaveBeenCalledWith('telegram:999', expect.stringContaining('plynx relay add-chat'));
+    expect(adapter.send).toHaveBeenCalledWith('telegram:999', expect.stringContaining('pilotlynx relay add-chat'));
   });
 
   it('/run with project and workflow executes run', async () => {

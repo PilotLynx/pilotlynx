@@ -11,7 +11,7 @@ export function makeStatusCommand(): Command {
 
       // ── Section 1: Projects table ──
       if (status.projects.length === 0) {
-        console.log(chalk.dim('No projects registered. Run `plynx project create <name>` to get started.\n'));
+        console.log(chalk.dim('No projects registered. Run `pilotlynx create <name>` to get started.\n'));
       } else {
         console.log(chalk.blue.bold('Projects\n'));
 

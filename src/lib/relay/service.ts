@@ -206,8 +206,8 @@ function installWindows(): void {
   throw new Error(
     'Automatic Windows service installation requires the "node-windows" package.\n' +
     'Install it with: npm install -g node-windows\n' +
-    'Then run: plynx relay install\n\n' +
-    'Alternatively, run "plynx relay start" manually or create a Task Scheduler entry.'
+    'Then run: pilotlynx relay install\n\n' +
+    'Alternatively, run "pilotlynx relay start" manually or create a Task Scheduler entry.'
   );
 }
 
