@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-PilotLynx (`plynx`) is an npm package providing a CLI for local monorepo orchestration of Claude Agent SDK (TypeScript) workflows across multiple isolated projects. The CLI binaries are `plynx` (primary) and `pilotlynx` (alias), entry point at `dist/cli.js`.
+PilotLynx (`pilotlynx`) is an npm package providing a CLI for local monorepo orchestration of Claude Agent SDK (TypeScript) workflows across multiple isolated projects. The CLI binaries are `pilotlynx` (primary) and `pilotlynx` (alias), entry point at `dist/cli.js`.
 
-This repo is a **pure npm package** — it contains only the CLI tool and a bundled project template. User workspaces (with `pilotlynx/` config dir and sibling project directories) are created separately via `plynx init`.
+This repo is a **pure npm package** — it contains only the CLI tool and a bundled project template. User workspaces (with `pilotlynx/` config dir and sibling project directories) are created separately via `pilotlynx init`.
 
 ## Build & Run
 
@@ -18,7 +18,7 @@ npm install
 npm run build
 
 # Run CLI
-npx plynx <command>
+npx pilotlynx <command>
 
 # Run tests
 npm test
@@ -28,14 +28,14 @@ The project uses ESM (`"type": "module"` in package.json). TypeScript source com
 
 ## Architecture
 
-**CLI = Agent SDK agents.** Every `plynx` CLI command invokes a dedicated Claude Agent SDK agent. The CLI is a thin wrapper — no business logic lives in CLI argument parsing.
+**CLI = Agent SDK agents.** Every `pilotlynx` CLI command invokes a dedicated Claude Agent SDK agent. The CLI is a thin wrapper — no business logic lives in CLI argument parsing.
 
 ### Three Roots
 
 | Concept | Stores | Found via |
 |---------|--------|-----------|
 | **Package root** | `dist/`, `template/`, `package.json` | `import.meta.url` walk-up |
-| **Config root** | `plynx.yaml`, `.env`, `template/`, `shared/` | `getConfigRoot()` — env var or global config file |
+| **Config root** | `pilotlynx.yaml`, `.env`, `template/`, `shared/` | `getConfigRoot()` — env var or global config file |
 | **Global config** | `config.yaml` with `configRoot` pointer | `~/.config/pilotlynx/config.yaml` (OS-appropriate via `env-paths`) |
 | **Workspace root** | Project directories (siblings of `pilotlynx/`) | `dirname(getConfigRoot())` |
 
@@ -43,9 +43,9 @@ The project uses ESM (`"type": "module"` in package.json). TypeScript source com
 
 1. `PILOTLYNX_ROOT` env var → direct path to the `pilotlynx/` config directory (tests/CI)
 2. Global config file → `~/.config/pilotlynx/config.yaml` contains `configRoot` pointing to the `pilotlynx/` directory
-3. Error → suggest `plynx init`
+3. Error → suggest `pilotlynx init`
 
-The global config file is written by `plynx init` and enables the CLI to work from any directory without filesystem searching.
+The global config file is written by `pilotlynx init` and enables the CLI to work from any directory without filesystem searching.
 
 ### Project Registry
 
@@ -53,18 +53,18 @@ Projects are tracked in `pilotlynx/projects.yaml` (name→path mapping). This en
 
 ### Key Commands
 
-- `plynx init` — create a new workspace with `pilotlynx/` config directory
-- `plynx project create <name>` — scaffold from template and register
-- `plynx project add <name> --path <dir>` — adopt an existing directory as a project
-- `plynx projects list` — enumerate registered projects with paths
-- `plynx run <project> <workflow>` — run workflow with secrets injection
-- `plynx improve` — trigger self-improvement loop across projects
-- `plynx schedule tick` — evaluate and run due scheduled workflows
-- `plynx verify <project>` — validate project structure
-- `plynx sync template <project>` — apply template updates
-- `plynx env <project>` — output policy-filtered secrets (dotenv, --export, --json, --envrc)
-- `plynx link <project>` — configure project for direct access (sets PILOTLYNX_ROOT in .claude/settings.json, optional --direnv)
-- `plynx unlink <project>` — remove direct-access configuration
+- `pilotlynx init` — create a new workspace with `pilotlynx/` config directory
+- `pilotlynx project create <name>` — scaffold from template and register
+- `pilotlynx project add <name> --path <dir>` — adopt an existing directory as a project
+- `pilotlynx projects list` — enumerate registered projects with paths
+- `pilotlynx run <project> <workflow>` — run workflow with secrets injection
+- `pilotlynx improve` — trigger self-improvement loop across projects
+- `pilotlynx schedule tick` — evaluate and run due scheduled workflows
+- `pilotlynx verify <project>` — validate project structure
+- `pilotlynx sync template <project>` — apply template updates
+- `pilotlynx env <project>` — output policy-filtered secrets (dotenv, --export, --json, --envrc)
+- `pilotlynx link <project>` — configure project for direct access (sets PILOTLYNX_ROOT in .claude/settings.json, optional --direnv)
+- `pilotlynx unlink <project>` — remove direct-access configuration
 
 ### Repository Layout (npm package)
 
@@ -78,12 +78,12 @@ Projects are tracked in `pilotlynx/projects.yaml` (name→path mapping). This en
 /LICENSE
 ```
 
-### User Workspace (created by `plynx init`)
+### User Workspace (created by `pilotlynx init`)
 
 ```
 my-workspace/                  ← workspace root
-  pilotlynx/                  ← config root (plynx infrastructure)
-    plynx.yaml                — workspace marker
+  pilotlynx/                  ← config root (pilotlynx infrastructure)
+    pilotlynx.yaml                — workspace marker
     projects.yaml             — project registry (name→path mapping)
     .env                      — secrets (never committed)
     .gitignore

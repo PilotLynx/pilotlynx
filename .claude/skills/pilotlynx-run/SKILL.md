@@ -1,5 +1,5 @@
 ---
-name: plynx-run
+name: pilotlynx-run
 description: Run a workflow in a PilotLynx project with secrets injection and logging
 argument-hint: <project> <workflow>
 allowed-tools: Bash

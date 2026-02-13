@@ -13,7 +13,7 @@ interface WorkflowResult {
 
 /**
  * Reviews recent project activity and produces updates to project memory.
- * Triggered by `plynx improve` with distilled feedback, or manually.
+ * Triggered by `pilotlynx improve` with distilled feedback, or manually.
  */
 export async function run(config: WorkflowConfig): Promise<WorkflowResult> {
   return {

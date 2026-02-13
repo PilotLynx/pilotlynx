@@ -1,5 +1,5 @@
 ---
-name: plynx-logs
+name: pilotlynx-logs
 description: View recent workflow run logs for a PilotLynx project
 argument-hint: <project> [--last <n>] [--workflow <name>] [--failures]
 allowed-tools: Bash

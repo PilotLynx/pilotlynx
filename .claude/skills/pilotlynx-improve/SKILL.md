@@ -1,5 +1,5 @@
 ---
-name: plynx-improve
+name: pilotlynx-improve
 description: Trigger self-improvement loop across all PilotLynx projects
 allowed-tools: Bash
 ---

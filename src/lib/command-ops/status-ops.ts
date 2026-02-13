@@ -82,7 +82,7 @@ export function getWorkspaceStatus(): StatusResult {
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'pipe'],
     });
-    cronInstalled = crontab.includes('plynx') && crontab.includes('tick');
+    cronInstalled = crontab.includes('pilotlynx') && crontab.includes('tick');
   } catch {
     // No crontab or command not available
   }

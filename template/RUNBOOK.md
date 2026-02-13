@@ -3,8 +3,8 @@
 ## Quick Start
 
 1. Ensure PilotLynx is built: `npm run build` from repo root
-2. Run a workflow: `npx plynx run {{PROJECT_NAME}} <workflow>`
-3. Check project status: `npx plynx verify {{PROJECT_NAME}}`
+2. Run a workflow: `npx pilotlynx run {{PROJECT_NAME}} <workflow>`
+3. Check project status: `npx pilotlynx verify {{PROJECT_NAME}}`
 
 ## Workflows
 
@@ -13,7 +13,7 @@
 Reviews recent project activity and updates memory files.
 
 ```bash
-npx plynx run {{PROJECT_NAME}} daily_feedback
+npx pilotlynx run {{PROJECT_NAME}} daily_feedback
 ```
 
 ### task_execute
@@ -21,7 +21,7 @@ npx plynx run {{PROJECT_NAME}} daily_feedback
 Executes a specific task. Provide task details as input.
 
 ```bash
-npx plynx run {{PROJECT_NAME}} task_execute
+npx pilotlynx run {{PROJECT_NAME}} task_execute
 ```
 
 ### project_review
@@ -29,7 +29,7 @@ npx plynx run {{PROJECT_NAME}} task_execute
 Produces a short project status update.
 
 ```bash
-npx plynx run {{PROJECT_NAME}} project_review
+npx pilotlynx run {{PROJECT_NAME}} project_review
 ```
 
 ## Troubleshooting

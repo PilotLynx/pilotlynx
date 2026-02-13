@@ -10,7 +10,7 @@ describe('projectSetupCallback', () => {
   let policiesDir: string;
 
   function setup() {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-cb-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-cb-'));
     projectDir = join(tmpDir, 'myproject');
     policiesDir = join(tmpDir, 'pilotlynx', 'shared', 'policies');
     mkdirSync(projectDir, { recursive: true });

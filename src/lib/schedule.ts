@@ -20,7 +20,7 @@ export function loadScheduleState(project: string): ScheduleState {
     const raw = JSON.parse(readFileSync(filePath, 'utf8'));
     return ScheduleStateSchema.parse(raw);
   } catch {
-    console.warn(`[plynx] Warning: schedule state corrupt for ${project}, resetting. Scheduled workflows may re-run.`);
+    console.warn(`[pilotlynx] Warning: schedule state corrupt for ${project}, resetting. Scheduled workflows may re-run.`);
     return { lastRuns: {} };
   }
 }

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// ── Workspace Config (plynx.yaml) ──
+// ── Workspace Config (pilotlynx.yaml) ──
 
 export const WorkspaceConfigSchema = z.object({
   version: z.number(),

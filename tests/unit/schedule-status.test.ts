@@ -14,7 +14,7 @@ describe('schedule status', () => {
   const origEnv = process.env.PILOTLYNX_ROOT;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-schedstat-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-schedstat-'));
     configDir = join(tmpDir, CONFIG_DIR_NAME);
     projectDir = join(tmpDir, 'myproj');
     process.env.PILOTLYNX_ROOT = configDir;
@@ -23,7 +23,7 @@ describe('schedule status', () => {
 
     mkdirSync(join(configDir, 'shared', 'policies'), { recursive: true });
     writeFileSync(join(configDir, 'projects.yaml'), 'version: 1\nprojects: {}\n');
-    writeFileSync(join(configDir, 'plynx.yaml'), 'version: 1\nname: test\nautoImprove:\n  enabled: true\n');
+    writeFileSync(join(configDir, 'pilotlynx.yaml'), 'version: 1\nname: test\nautoImprove:\n  enabled: true\n');
     mkdirSync(projectDir, { recursive: true });
     registerProject('myproj', projectDir);
   });

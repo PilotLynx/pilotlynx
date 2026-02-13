@@ -34,12 +34,12 @@ describe('relay chat', () => {
   const origEnv = process.env.PILOTLYNX_ROOT;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-relay-chat-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-relay-chat-'));
     configDir = join(tmpDir, CONFIG_DIR_NAME);
     projectDir = join(tmpDir, 'test-project');
     mkdirSync(configDir, { recursive: true });
     mkdirSync(projectDir, { recursive: true });
-    writeFileSync(join(configDir, 'plynx.yaml'), stringifyYaml({ version: 1, name: 'test' }));
+    writeFileSync(join(configDir, 'pilotlynx.yaml'), stringifyYaml({ version: 1, name: 'test' }));
     writeFileSync(join(configDir, '.env'), 'API_KEY=test\n');
     writeFileSync(join(configDir, 'projects.yaml'), stringifyYaml({
       version: 1,

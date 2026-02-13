@@ -8,7 +8,7 @@ describe('loadRootEnv', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-test-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-test-'));
   });
 
   afterEach(() => {

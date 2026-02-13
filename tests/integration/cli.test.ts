@@ -29,12 +29,12 @@ describe('CLI integration', () => {
   let configDir: string;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-cli-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-cli-'));
     configDir = join(tmpDir, CONFIG_DIR_NAME);
 
     // Create a minimal workspace structure with new layout
     mkdirSync(configDir, { recursive: true });
-    writeFileSync(join(configDir, 'plynx.yaml'), 'version: 1\nname: test\n');
+    writeFileSync(join(configDir, 'pilotlynx.yaml'), 'version: 1\nname: test\n');
     // Create empty project registry
     writeFileSync(join(configDir, 'projects.yaml'), YAML.stringify({ version: 1, projects: {} }));
     mkdirSync(join(configDir, 'template', 'workflows'), { recursive: true });
@@ -94,12 +94,12 @@ describe('CLI integration', () => {
   });
 
   it('init creates a workspace with pilotlynx/ dir and projects.yaml', () => {
-    const initDir = mkdtempSync(join(tmpdir(), 'plynx-init-'));
+    const initDir = mkdtempSync(join(tmpdir(), 'pilotlynx-init-'));
     const { exitCode, output } = runCli(['init', '--name', 'myws', '--path', initDir]);
     expect(exitCode).toBe(0);
     expect(output).toContain('Workspace initialized');
 
-    expect(existsSync(join(initDir, CONFIG_DIR_NAME, 'plynx.yaml'))).toBe(true);
+    expect(existsSync(join(initDir, CONFIG_DIR_NAME, 'pilotlynx.yaml'))).toBe(true);
     expect(existsSync(join(initDir, CONFIG_DIR_NAME, 'projects.yaml'))).toBe(true);
     expect(existsSync(join(initDir, CONFIG_DIR_NAME, 'template'))).toBe(true);
     expect(existsSync(join(initDir, CONFIG_DIR_NAME, 'shared', 'policies'))).toBe(true);
@@ -137,7 +137,7 @@ describe('CLI integration', () => {
   });
 
   it('init writes global config', () => {
-    const initDir = mkdtempSync(join(tmpdir(), 'plynx-init-gc-'));
+    const initDir = mkdtempSync(join(tmpdir(), 'pilotlynx-init-gc-'));
     const { exitCode } = runCli(['init', '--name', 'myws', '--path', initDir]);
     expect(exitCode).toBe(0);
 

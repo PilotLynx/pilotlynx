@@ -1,5 +1,5 @@
 ---
-name: plynx-project-create
+name: pilotlynx-project-create
 description: Create a new PilotLynx project from template
 argument-hint: <project-name>
 allowed-tools: Bash

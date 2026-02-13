@@ -27,17 +27,17 @@ function resolveNodePath(): string {
   }
 }
 
-function resolvePlynxBin(): string {
+function resolvePilotlynxBin(): string {
   try {
-    return execFileSync('which', ['plynx'], { encoding: 'utf8' }).trim();
+    return execFileSync('which', ['pilotlynx'], { encoding: 'utf8' }).trim();
   } catch {
-    return 'plynx';
+    return 'pilotlynx';
   }
 }
 
 // ── Linux (systemd user service) ──
 
-const SYSTEMD_SERVICE_NAME = 'plynx-relay';
+const SYSTEMD_SERVICE_NAME = 'pilotlynx-relay';
 
 function systemdServicePath(): string {
   return join(homedir(), '.config', 'systemd', 'user', `${SYSTEMD_SERVICE_NAME}.service`);
@@ -45,7 +45,7 @@ function systemdServicePath(): string {
 
 function generateSystemdUnit(): string {
   const nodePath = resolveNodePath();
-  const plynxBin = resolvePlynxBin();
+  const pilotlynxBin = resolvePilotlynxBin();
   const configRoot = getConfigRoot();
 
   return `[Unit]
@@ -55,7 +55,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=${nodePath} ${plynxBin} relay start
+ExecStart=${nodePath} ${pilotlynxBin} relay start
 Restart=on-failure
 RestartSec=5
 StartLimitBurst=3
@@ -125,7 +125,7 @@ function launchdPlistPath(): string {
 
 function generateLaunchdPlist(): string {
   const nodePath = resolveNodePath();
-  const plynxBin = resolvePlynxBin();
+  const pilotlynxBin = resolvePilotlynxBin();
   const configRoot = getConfigRoot();
   const logDir = join(homedir(), 'Library', 'Logs', 'pilotlynx');
 
@@ -138,7 +138,7 @@ function generateLaunchdPlist(): string {
   <key>ProgramArguments</key>
   <array>
     <string>${nodePath}</string>
-    <string>${plynxBin}</string>
+    <string>${pilotlynxBin}</string>
     <string>relay</string>
     <string>start</string>
   </array>

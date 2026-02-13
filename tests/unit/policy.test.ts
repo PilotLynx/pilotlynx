@@ -9,7 +9,7 @@ describe('loadPolicy', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-test-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-test-'));
     resetPolicyCache();
   });
 

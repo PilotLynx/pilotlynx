@@ -14,7 +14,7 @@ describe('status-ops', () => {
   const origEnv = process.env.PILOTLYNX_ROOT;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-test-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-test-'));
     configDir = join(tmpDir, CONFIG_DIR_NAME);
     mkdirSync(configDir, { recursive: true });
     process.env.PILOTLYNX_ROOT = configDir;
@@ -24,7 +24,7 @@ describe('status-ops', () => {
 
     // Create workspace marker
     writeFileSync(
-      join(configDir, 'plynx.yaml'),
+      join(configDir, 'pilotlynx.yaml'),
       YAML.stringify({ version: 1, name: 'test-ws', autoImprove: { enabled: true } })
     );
   });
@@ -79,7 +79,7 @@ describe('status-ops', () => {
 
   it('reports auto-improve disabled when config says so', () => {
     writeFileSync(
-      join(configDir, 'plynx.yaml'),
+      join(configDir, 'pilotlynx.yaml'),
       YAML.stringify({ version: 1, name: 'test-ws', autoImprove: { enabled: false } })
     );
     const status = getWorkspaceStatus();

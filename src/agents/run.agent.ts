@@ -22,9 +22,9 @@ export function getRunAgentConfig(
 
   const sandbox = detectSandbox();
   if (sandbox.level === 'kernel') {
-    console.error(`[plynx] Filesystem sandbox: ${sandbox.mechanism} (kernel-level isolation)`);
+    console.error(`[pilotlynx] Filesystem sandbox: ${sandbox.mechanism} (kernel-level isolation)`);
   } else {
-    console.error('[plynx] Filesystem sandbox: regex-only (bwrap not available)');
+    console.error('[pilotlynx] Filesystem sandbox: regex-only (bwrap not available)');
   }
 
   return {

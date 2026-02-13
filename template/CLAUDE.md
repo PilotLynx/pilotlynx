@@ -44,7 +44,7 @@ The `.claude/settings.json` file configures Claude Code defaults for this projec
 
 ### How Workflows Execute
 
-When `plynx run <project> <workflow>` is invoked:
+When `pilotlynx run <project> <workflow>` is invoked:
 
 1. PilotLynx loads the workflow file and injects allowed secrets as environment variables
 2. A Claude Agent SDK session starts inside this project directory
@@ -60,14 +60,14 @@ descriptions of what the agent should accomplish.
 
 Secrets are injected at runtime as environment variables. They come from `pilotlynx/.env`
 filtered through your project's access policy in `pilotlynx/shared/policies/secrets-access.yaml`.
-Use `plynx env <project>` to see which secrets your project has access to.
+Use `pilotlynx env <project>` to see which secrets your project has access to.
 
 ## Direct Access
 
 When working directly in this project directory (e.g., opening it in Claude Code), PilotLynx needs to know where the workspace config lives. Two options:
 
-1. **Global config** (automatic after `plynx init`) — PilotLynx stores the config path in `~/.config/pilotlynx/config.yaml`. CLI commands work from any directory.
-2. **direnv for MCP secrets** — run `plynx link {{PROJECT_NAME}} --direnv` to generate a `.envrc` that exports policy-filtered secrets. Then `direnv allow` to activate.
+1. **Global config** (automatic after `pilotlynx init`) — PilotLynx stores the config path in `~/.config/pilotlynx/config.yaml`. CLI commands work from any directory.
+2. **direnv for MCP secrets** — run `pilotlynx link {{PROJECT_NAME}} --direnv` to generate a `.envrc` that exports policy-filtered secrets. Then `direnv allow` to activate.
 
 The `.envrc` file is gitignored and must be regenerated when secrets change.
 

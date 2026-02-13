@@ -14,7 +14,7 @@ describe('getProjectCreateAgentConfig', () => {
   const origEnv = process.env.PILOTLYNX_ROOT;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-create-agent-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-create-agent-'));
     configDir = join(tmpDir, CONFIG_DIR_NAME);
     projectDir = join(tmpDir, 'newproject');
     process.env.PILOTLYNX_ROOT = configDir;

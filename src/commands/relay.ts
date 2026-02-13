@@ -19,7 +19,7 @@ export function makeRelayCommand(): Command {
       const config = loadRelayConfig();
       if (!config) {
         console.error(chalk.red('No relay.yaml found. Create one in your pilotlynx/ directory.'));
-        console.log(chalk.dim('See: plynx relay --help'));
+        console.log(chalk.dim('See: pilotlynx relay --help'));
         process.exit(1);
       }
 

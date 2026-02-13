@@ -13,7 +13,7 @@ describe('executeEnv', () => {
   const origEnv = process.env.PILOTLYNX_ROOT;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-env-ops-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-env-ops-'));
     configDir = join(tmpDir, CONFIG_DIR_NAME);
     process.env.PILOTLYNX_ROOT = configDir;
     resetConfigCache();

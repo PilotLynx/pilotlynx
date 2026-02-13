@@ -30,7 +30,7 @@ describe('logs command', () => {
   const origEnv = process.env.PILOTLYNX_ROOT;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-logs-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-logs-'));
     configDir = join(tmpDir, CONFIG_DIR_NAME);
     projectDir = join(tmpDir, 'proj');
     logsDir = join(projectDir, 'logs');

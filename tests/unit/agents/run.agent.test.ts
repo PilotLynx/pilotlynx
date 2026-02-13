@@ -14,7 +14,7 @@ describe('getRunAgentConfig', () => {
   const origEnv = process.env.PILOTLYNX_ROOT;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-run-agent-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-run-agent-'));
     configDir = join(tmpDir, CONFIG_DIR_NAME);
     projectDir = join(tmpDir, 'testproject');
     process.env.PILOTLYNX_ROOT = configDir;

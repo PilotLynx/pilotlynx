@@ -60,7 +60,7 @@ Tests use temporary directories with `PILOTLYNX_ROOT` env var. Each test creates
 
 ```typescript
 beforeEach(() => {
-  tmpDir = mkdtempSync(join(tmpdir(), 'plynx-test-'));
+  tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-test-'));
   configDir = join(tmpDir, CONFIG_DIR_NAME);
   process.env.PILOTLYNX_ROOT = configDir;
   resetConfigCache();

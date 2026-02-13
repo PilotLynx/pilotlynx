@@ -1,5 +1,5 @@
 ---
-name: plynx-projects-list
+name: pilotlynx-projects-list
 description: List all PilotLynx projects
 allowed-tools: Bash
 ---

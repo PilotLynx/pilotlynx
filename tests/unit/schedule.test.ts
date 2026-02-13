@@ -179,7 +179,7 @@ describe('schedule', () => {
     const origEnv = process.env.PILOTLYNX_ROOT;
 
     beforeEach(() => {
-      tmpDir = mkdtempSync(join(tmpdir(), 'plynx-sched-'));
+      tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-sched-'));
       configDir = join(tmpDir, CONFIG_DIR_NAME);
       projectDir = join(tmpDir, 'proj');
       process.env.PILOTLYNX_ROOT = configDir;
@@ -230,7 +230,7 @@ describe('schedule', () => {
     const origEnv = process.env.PILOTLYNX_ROOT;
 
     beforeEach(() => {
-      tmpDir = mkdtempSync(join(tmpdir(), 'plynx-imp-'));
+      tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-imp-'));
       configDir = join(tmpDir, CONFIG_DIR_NAME);
       process.env.PILOTLYNX_ROOT = configDir;
       resetConfigCache();

@@ -69,10 +69,10 @@ describe('router', () => {
   const origEnv = process.env.PILOTLYNX_ROOT;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-router-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-router-'));
     configDir = join(tmpDir, CONFIG_DIR_NAME);
     mkdirSync(configDir, { recursive: true });
-    writeFileSync(join(configDir, 'plynx.yaml'), stringifyYaml({ version: 1, name: 'test' }));
+    writeFileSync(join(configDir, 'pilotlynx.yaml'), stringifyYaml({ version: 1, name: 'test' }));
     writeFileSync(
       join(configDir, 'relay.yaml'),
       stringifyYaml({

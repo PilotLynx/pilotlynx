@@ -38,7 +38,7 @@ export function getPackageRoot(): string {
     if (existsSync(pkgPath)) {
       try {
         const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
-        if (pkg.bin?.plynx || pkg.bin?.pilotlynx) {
+        if (pkg.bin?.pilotlynx) {
           _packageRoot = dir;
           return dir;
         }
@@ -74,7 +74,7 @@ export function getConfigRoot(): string {
 
   // Step 2: Global config file
   const global = loadGlobalConfig();
-  if (global && existsSync(join(global.configRoot, 'plynx.yaml'))) {
+  if (global && existsSync(join(global.configRoot, 'pilotlynx.yaml'))) {
     _configRoot = global.configRoot;
     return _configRoot;
   }
@@ -108,7 +108,7 @@ export function getProjectDir(name: string): string {
 }
 
 export function loadWorkspaceConfig(): WorkspaceConfig {
-  const raw = parseYaml(readFileSync(join(getConfigRoot(), 'plynx.yaml'), 'utf8'));
+  const raw = parseYaml(readFileSync(join(getConfigRoot(), 'pilotlynx.yaml'), 'utf8'));
   return WorkspaceConfigSchema.parse(raw);
 }
 

@@ -23,7 +23,7 @@ import { makeDoctorCommand } from './commands/doctor.js';
 const program = new Command();
 
 program
-  .name('plynx')
+  .name('pilotlynx')
   .description('PilotLynx — local monorepo orchestration for Claude Agent SDK workflows')
   .version(getVersion())
   .exitOverride()
@@ -34,7 +34,7 @@ program.option('--verbose', 'enable verbose output');
 // Commands that work without a workspace
 program.addCommand(makeInitCommand());
 
-// Project management (top-level — plynx manages projects by default)
+// Project management (top-level — pilotlynx manages projects by default)
 program.addCommand(makeCreateCommand());
 program.addCommand(makeAddCommand());
 program.addCommand(makeRemoveCommand());

@@ -13,10 +13,10 @@ describe('relay locks', () => {
   const origEnv = process.env.PILOTLYNX_ROOT;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-relay-locks-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-relay-locks-'));
     configDir = join(tmpDir, CONFIG_DIR_NAME);
     mkdirSync(configDir, { recursive: true });
-    writeFileSync(join(configDir, 'plynx.yaml'), stringifyYaml({ version: 1, name: 'test' }));
+    writeFileSync(join(configDir, 'pilotlynx.yaml'), stringifyYaml({ version: 1, name: 'test' }));
     writeFileSync(join(configDir, 'projects.yaml'), stringifyYaml({ version: 1, projects: {} }));
     process.env.PILOTLYNX_ROOT = configDir;
     resetConfigCache();

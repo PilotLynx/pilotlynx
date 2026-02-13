@@ -13,10 +13,10 @@ describe('relay history', () => {
   const origEnv = process.env.PILOTLYNX_ROOT;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-relay-hist-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-relay-hist-'));
     configDir = join(tmpDir, CONFIG_DIR_NAME);
     mkdirSync(configDir, { recursive: true });
-    writeFileSync(join(configDir, 'plynx.yaml'), stringifyYaml({ version: 1, name: 'test' }));
+    writeFileSync(join(configDir, 'pilotlynx.yaml'), stringifyYaml({ version: 1, name: 'test' }));
     process.env.PILOTLYNX_ROOT = configDir;
     resetConfigCache();
     resetRelayConfigCache();

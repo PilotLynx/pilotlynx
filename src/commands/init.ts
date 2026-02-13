@@ -17,10 +17,12 @@ export function makeInitCommand(): Command {
       const name = opts.name ?? basename(targetDir);
       const configDir = join(targetDir, CONFIG_DIR_NAME);
 
-      // Check for existing workspace marker
-      if (existsSync(join(configDir, 'plynx.yaml'))) {
-        console.error(chalk.red(`Workspace already initialized at ${targetDir}`));
-        process.exit(1);
+      // If workspace already exists, ensure global config points to it
+      if (existsSync(join(configDir, 'pilotlynx.yaml'))) {
+        saveGlobalConfig(configDir);
+        console.log(chalk.green(`Workspace already initialized at ${configDir}`));
+        console.log(chalk.dim('Global config updated.'));
+        return;
       }
 
       console.log(chalk.blue(`Initializing workspace "${name}" at ${targetDir}\n`));
@@ -28,7 +30,7 @@ export function makeInitCommand(): Command {
       // Create config directory and workspace marker
       mkdirSync(configDir, { recursive: true });
       const marker = { version: 1, name, autoImprove: { enabled: true } };
-      writeFileSync(join(configDir, 'plynx.yaml'), YAML.stringify(marker), 'utf8');
+      writeFileSync(join(configDir, 'pilotlynx.yaml'), YAML.stringify(marker), 'utf8');
 
       // Create shared directory structure inside config dir
       const dirs = [
@@ -103,15 +105,15 @@ export function makeInitCommand(): Command {
         }), 'utf8');
       }
 
-      // Register globally so plynx works from any directory
+      // Register globally so pilotlynx works from any directory
       saveGlobalConfig(configDir);
 
       // Install cron job for schedule tick (every 15 min)
       let cronInstalled = false;
       let cronError = false;
       try {
-        const plynxBin = resolve(join(getPackageRoot(), 'dist', 'cli.js'));
-        cronInstalled = installScheduleCron(`node ${plynxBin}`);
+        const pilotlynxBin = resolve(join(getPackageRoot(), 'dist', 'cli.js'));
+        cronInstalled = installScheduleCron(`node ${pilotlynxBin}`);
         if (!cronInstalled) cronError = true;
       } catch {
         cronError = true;
@@ -119,7 +121,7 @@ export function makeInitCommand(): Command {
 
       console.log(chalk.green('Workspace initialized:'));
       console.log(`  ${chalk.dim('config')}    ${CONFIG_DIR_NAME}/`);
-      console.log(`  ${chalk.dim('marker')}    ${CONFIG_DIR_NAME}/plynx.yaml`);
+      console.log(`  ${chalk.dim('marker')}    ${CONFIG_DIR_NAME}/pilotlynx.yaml`);
       console.log(`  ${chalk.dim('registry')}  ${CONFIG_DIR_NAME}/projects.yaml`);
       console.log(`  ${chalk.dim('shared')}    ${CONFIG_DIR_NAME}/shared/`);
       console.log(`  ${chalk.dim('template')}  ${CONFIG_DIR_NAME}/template/`);

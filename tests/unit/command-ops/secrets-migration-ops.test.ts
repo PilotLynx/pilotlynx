@@ -16,7 +16,7 @@ describe('applyMigration', () => {
   const origEnv = process.env.PILOTLYNX_ROOT;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-migration-ops-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-migration-ops-'));
     configDir = join(tmpDir, CONFIG_DIR_NAME);
     projectDir = join(tmpDir, 'myproject');
     process.env.PILOTLYNX_ROOT = configDir;
@@ -78,8 +78,8 @@ describe('applyMigration', () => {
     applyMigration('myproject', projectDir, plan);
 
     expect(existsSync(join(projectDir, '.env'))).toBe(false);
-    expect(existsSync(join(projectDir, '.env.plynx-backup'))).toBe(true);
-    expect(readFileSync(join(projectDir, '.env.plynx-backup'), 'utf8')).toBe('SECRET=value\n');
+    expect(existsSync(join(projectDir, '.env.pilotlynx-backup'))).toBe(true);
+    expect(readFileSync(join(projectDir, '.env.pilotlynx-backup'), 'utf8')).toBe('SECRET=value\n');
   });
 
   it('does not fail when project has no .env', () => {
@@ -183,7 +183,7 @@ describe('applyMigration', () => {
 
     // Project .env backed up
     expect(existsSync(join(projectDir, '.env'))).toBe(false);
-    expect(existsSync(join(projectDir, '.env.plynx-backup'))).toBe(true);
+    expect(existsSync(join(projectDir, '.env.pilotlynx-backup'))).toBe(true);
 
     // .mcp.json rewritten
     const mcpContent = readFileSync(join(projectDir, '.mcp.json'), 'utf8');
@@ -331,7 +331,7 @@ describe('replaceEnvKey', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-replace-env-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-replace-env-'));
   });
 
   afterEach(() => {

@@ -14,7 +14,7 @@ describe('getSyncTemplateAgentConfig', () => {
   const origEnv = process.env.PILOTLYNX_ROOT;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-sync-agent-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-sync-agent-'));
     configDir = join(tmpDir, CONFIG_DIR_NAME);
     projectDir = join(tmpDir, 'testproject');
     process.env.PILOTLYNX_ROOT = configDir;

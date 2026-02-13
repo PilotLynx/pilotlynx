@@ -28,7 +28,7 @@ function stripExistingEntry(crontab: string): string {
   return result.join('\n');
 }
 
-export function installScheduleCron(plynxBin: string): boolean {
+export function installScheduleCron(pilotlynxBin: string): boolean {
   if (platform() === 'win32') return false;
 
   const current = getCurrentCrontab();
@@ -36,7 +36,7 @@ export function installScheduleCron(plynxBin: string): boolean {
 
   const entry = [
     MARKER_START,
-    `*/15 * * * * ${plynxBin} schedule tick >> /tmp/pilotlynx-tick.log 2>&1`,
+    `*/15 * * * * ${pilotlynxBin} schedule tick >> /tmp/pilotlynx-tick.log 2>&1`,
     MARKER_END,
   ].join('\n');
 

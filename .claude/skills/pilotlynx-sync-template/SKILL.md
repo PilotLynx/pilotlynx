@@ -1,5 +1,5 @@
 ---
-name: plynx-sync-template
+name: pilotlynx-sync-template
 description: Sync a project with the PilotLynx template
 argument-hint: <project>
 allowed-tools: Bash

@@ -51,7 +51,7 @@ describe('config', () => {
 
   describe('getConfigRoot', () => {
     it('resolves via PILOTLYNX_ROOT env var', () => {
-      const dir = mkdtempSync(join(tmpdir(), 'plynx-cfgroot-'));
+      const dir = mkdtempSync(join(tmpdir(), 'pilotlynx-cfgroot-'));
       const configDir = join(dir, CONFIG_DIR_NAME);
       mkdirSync(configDir, { recursive: true });
       process.env.PILOTLYNX_ROOT = configDir;
@@ -62,10 +62,10 @@ describe('config', () => {
     });
 
     it('resolves via global config file', () => {
-      const dir = mkdtempSync(join(tmpdir(), 'plynx-global-'));
+      const dir = mkdtempSync(join(tmpdir(), 'pilotlynx-global-'));
       const configDir = join(dir, CONFIG_DIR_NAME);
       mkdirSync(configDir, { recursive: true });
-      writeFileSync(join(configDir, 'plynx.yaml'), YAML.stringify({ version: 1, name: 'test' }));
+      writeFileSync(join(configDir, 'pilotlynx.yaml'), YAML.stringify({ version: 1, name: 'test' }));
 
       saveGlobalConfig(configDir);
       resetConfigCache();
@@ -77,14 +77,14 @@ describe('config', () => {
     });
 
     it('env var takes priority over global config', () => {
-      const envDir = mkdtempSync(join(tmpdir(), 'plynx-envpri-'));
+      const envDir = mkdtempSync(join(tmpdir(), 'pilotlynx-envpri-'));
       const envConfigDir = join(envDir, CONFIG_DIR_NAME);
       mkdirSync(envConfigDir, { recursive: true });
 
-      const globalDir = mkdtempSync(join(tmpdir(), 'plynx-globpri-'));
+      const globalDir = mkdtempSync(join(tmpdir(), 'pilotlynx-globpri-'));
       const globalConfigDir = join(globalDir, CONFIG_DIR_NAME);
       mkdirSync(globalConfigDir, { recursive: true });
-      writeFileSync(join(globalConfigDir, 'plynx.yaml'), YAML.stringify({ version: 1, name: 'test' }));
+      writeFileSync(join(globalConfigDir, 'pilotlynx.yaml'), YAML.stringify({ version: 1, name: 'test' }));
 
       saveGlobalConfig(globalConfigDir);
       process.env.PILOTLYNX_ROOT = envConfigDir;
@@ -97,11 +97,11 @@ describe('config', () => {
       rmSync(globalDir, { recursive: true, force: true });
     });
 
-    it('throws when global config points to invalid path (no plynx.yaml)', () => {
-      const dir = mkdtempSync(join(tmpdir(), 'plynx-invalid-'));
+    it('throws when global config points to invalid path (no pilotlynx.yaml)', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'pilotlynx-invalid-'));
       const configDir = join(dir, CONFIG_DIR_NAME);
       mkdirSync(configDir, { recursive: true });
-      // No plynx.yaml created
+      // No pilotlynx.yaml created
 
       saveGlobalConfig(configDir);
       resetConfigCache();
@@ -123,7 +123,7 @@ describe('config', () => {
 
   describe('TEMPLATE_DIR', () => {
     it('returns config root template when it exists', () => {
-      const dir = mkdtempSync(join(tmpdir(), 'plynx-tpl-'));
+      const dir = mkdtempSync(join(tmpdir(), 'pilotlynx-tpl-'));
       const configDir = join(dir, CONFIG_DIR_NAME);
       mkdirSync(configDir, { recursive: true });
       process.env.PILOTLYNX_ROOT = configDir;
@@ -137,7 +137,7 @@ describe('config', () => {
     });
 
     it('falls back to package template when config template missing', () => {
-      const dir = mkdtempSync(join(tmpdir(), 'plynx-tpl2-'));
+      const dir = mkdtempSync(join(tmpdir(), 'pilotlynx-tpl2-'));
       const configDir = join(dir, CONFIG_DIR_NAME);
       mkdirSync(configDir, { recursive: true });
       process.env.PILOTLYNX_ROOT = configDir;

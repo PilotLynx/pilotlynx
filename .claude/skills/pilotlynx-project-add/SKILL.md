@@ -1,5 +1,5 @@
 ---
-name: plynx-project-add
+name: pilotlynx-project-add
 description: Add an existing directory as a PilotLynx project
 argument-hint: <name> [path]
 allowed-tools: Bash

@@ -121,7 +121,7 @@ export function applyMigration(
 
   // Backup and remove project .env
   if (existsSync(projectEnvPath)) {
-    renameSync(projectEnvPath, join(projectDir, '.env.plynx-backup'));
+    renameSync(projectEnvPath, join(projectDir, '.env.pilotlynx-backup'));
   }
 
   // Update secrets-access policy

@@ -43,7 +43,7 @@ export function buildProjectEnv(projectName: string): Record<string, string> {
 
   if (missingKeys.length > 0) {
     console.warn(chalk.yellow(
-      `[plynx] Warning: Policy for "${projectName}" references keys not found in .env: ${missingKeys.join(', ')}`
+      `[pilotlynx] Warning: Policy for "${projectName}" references keys not found in .env: ${missingKeys.join(', ')}`
     ));
   }
 

@@ -1,5 +1,5 @@
 ---
-name: plynx-schedule-tick
+name: pilotlynx-schedule-tick
 description: Evaluate and run due scheduled workflows
 allowed-tools: Bash
 ---

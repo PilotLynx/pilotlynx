@@ -1,5 +1,5 @@
 ---
-name: plynx-schedule-status
+name: pilotlynx-schedule-status
 description: Show schedule status for a PilotLynx project
 argument-hint: <project>
 allowed-tools: Bash

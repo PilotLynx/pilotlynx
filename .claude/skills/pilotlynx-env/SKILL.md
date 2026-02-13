@@ -1,5 +1,5 @@
 ---
-name: plynx-env
+name: pilotlynx-env
 description: Output policy-filtered environment variables for a project
 argument-hint: <project> [--export|--json|--envrc]
 allowed-tools: Bash

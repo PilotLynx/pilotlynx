@@ -58,14 +58,14 @@ export function runDoctorChecks(): CheckResult[] {
   }
 
   // 3. Workspace marker exists
-  const markerPath = join(configRoot, 'plynx.yaml');
+  const markerPath = join(configRoot, 'pilotlynx.yaml');
   if (existsSync(markerPath)) {
-    checks.push({ name: 'Workspace marker', status: 'pass', message: 'plynx.yaml found' });
+    checks.push({ name: 'Workspace marker', status: 'pass', message: 'pilotlynx.yaml found' });
   } else {
     checks.push({
       name: 'Workspace marker',
       status: 'fail',
-      message: 'plynx.yaml not found in config root',
+      message: 'pilotlynx.yaml not found in config root',
       suggestion: 'Config root may be corrupt. Re-run `pilotlynx init`.',
     });
   }

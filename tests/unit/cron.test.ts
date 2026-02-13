@@ -27,7 +27,7 @@ describe('installScheduleCron', () => {
       return '' as any;
     });
 
-    const result = installScheduleCron('/usr/local/bin/plynx');
+    const result = installScheduleCron('/usr/local/bin/pilotlynx');
     expect(result).toBe(true);
 
     const setCall = mockedExec.mock.calls.find((c) => c[1]?.[0] === '-');
@@ -35,14 +35,14 @@ describe('installScheduleCron', () => {
     const input = (setCall?.[2] as any)?.input as string;
     expect(input).toContain('# BEGIN pilotlynx schedule');
     expect(input).toContain('# END pilotlynx schedule');
-    expect(input).toContain('/usr/local/bin/plynx schedule tick');
+    expect(input).toContain('/usr/local/bin/pilotlynx schedule tick');
   });
 
   it('replaces existing entry on reinstall', () => {
     const existingCrontab = [
       '0 * * * * some-other-job',
       '# BEGIN pilotlynx schedule',
-      '*/15 * * * * old-plynx schedule tick',
+      '*/15 * * * * old-pilotlynx schedule tick',
       '# END pilotlynx schedule',
       '',
     ].join('\n');
@@ -52,18 +52,18 @@ describe('installScheduleCron', () => {
       return '' as any;
     });
 
-    installScheduleCron('/new/plynx');
+    installScheduleCron('/new/pilotlynx');
 
     const setCall = mockedExec.mock.calls.find((c) => c[1]?.[0] === '-');
     const input = (setCall?.[2] as any)?.input as string;
-    expect(input).toContain('/new/plynx schedule tick');
-    expect(input).not.toContain('old-plynx');
+    expect(input).toContain('/new/pilotlynx schedule tick');
+    expect(input).not.toContain('old-pilotlynx');
     expect(input).toContain('some-other-job');
   });
 
   it('returns false on Windows', () => {
     mockedPlatform.mockReturnValue('win32');
-    const result = installScheduleCron('/usr/local/bin/plynx');
+    const result = installScheduleCron('/usr/local/bin/pilotlynx');
     expect(result).toBe(false);
     expect(mockedExec).not.toHaveBeenCalled();
   });
@@ -74,7 +74,7 @@ describe('uninstallScheduleCron', () => {
     const crontab = [
       '0 * * * * other-job',
       '# BEGIN pilotlynx schedule',
-      '*/15 * * * * plynx schedule tick',
+      '*/15 * * * * pilotlynx schedule tick',
       '# END pilotlynx schedule',
       '',
     ].join('\n');
@@ -106,7 +106,7 @@ describe('uninstallScheduleCron', () => {
 
 describe('isScheduleCronInstalled', () => {
   it('returns true when marker is present', () => {
-    mockedExec.mockReturnValue('# BEGIN pilotlynx schedule\n*/15 * * * * plynx tick\n# END pilotlynx schedule\n' as any);
+    mockedExec.mockReturnValue('# BEGIN pilotlynx schedule\n*/15 * * * * pilotlynx tick\n# END pilotlynx schedule\n' as any);
     expect(isScheduleCronInstalled()).toBe(true);
   });
 

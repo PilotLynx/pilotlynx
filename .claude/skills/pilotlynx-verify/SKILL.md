@@ -1,5 +1,5 @@
 ---
-name: plynx-verify
+name: pilotlynx-verify
 description: Validate a PilotLynx project structure
 argument-hint: <project>
 allowed-tools: Bash

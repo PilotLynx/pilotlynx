@@ -1,5 +1,5 @@
 ---
-name: plynx-link
+name: pilotlynx-link
 description: Configure a project for direct access (Claude Code, MCP servers)
 argument-hint: <project> [--direnv]
 allowed-tools: Bash

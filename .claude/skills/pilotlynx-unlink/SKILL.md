@@ -1,5 +1,5 @@
 ---
-name: plynx-unlink
+name: pilotlynx-unlink
 description: Remove direct-access configuration from a project
 argument-hint: <project>
 allowed-tools: Bash

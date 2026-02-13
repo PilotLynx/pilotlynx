@@ -29,7 +29,7 @@ export function getRecentLogs(project: string, days: number): RunRecord[] {
 
   if (corruptCount > 0) {
     console.warn(
-      `[plynx] Warning: ${corruptCount} log entr${corruptCount === 1 ? 'y' : 'ies'} in "${project}" could not be parsed`
+      `[pilotlynx] Warning: ${corruptCount} log entr${corruptCount === 1 ? 'y' : 'ies'} in "${project}" could not be parsed`
     );
   }
 

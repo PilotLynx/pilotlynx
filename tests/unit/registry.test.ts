@@ -21,7 +21,7 @@ describe('registry', () => {
   const origEnv = process.env.PILOTLYNX_ROOT;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-test-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-test-'));
     configDir = join(tmpDir, CONFIG_DIR_NAME);
     mkdirSync(configDir, { recursive: true });
     process.env.PILOTLYNX_ROOT = configDir;
@@ -105,7 +105,7 @@ describe('registry', () => {
     });
 
     it('stores absolute path for external directories', () => {
-      const externalDir = mkdtempSync(join(tmpdir(), 'plynx-external-'));
+      const externalDir = mkdtempSync(join(tmpdir(), 'pilotlynx-external-'));
       registerProject('external', externalDir);
 
       const reg = loadRegistry();
@@ -142,7 +142,7 @@ describe('registry', () => {
     });
 
     it('returns absolute path as-is for absolute entry', () => {
-      const externalDir = mkdtempSync(join(tmpdir(), 'plynx-ext-'));
+      const externalDir = mkdtempSync(join(tmpdir(), 'pilotlynx-ext-'));
       registerProject('ext', externalDir);
 
       const resolved = resolveProjectPath('ext');

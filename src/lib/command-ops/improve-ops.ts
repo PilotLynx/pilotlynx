@@ -69,7 +69,7 @@ export async function executeImprove(verbose?: boolean): Promise<ImproveResult> 
 
     const workflowPath = join(getProjectDir(project), 'workflows', `${feedbackWorkflow}.ts`);
     if (!existsSync(workflowPath)) {
-      console.log(chalk.dim(`[plynx] Skipping "${project}": no ${feedbackWorkflow} workflow found.`));
+      console.log(chalk.dim(`[pilotlynx] Skipping "${project}": no ${feedbackWorkflow} workflow found.`));
       continue;
     }
 

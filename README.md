@@ -13,7 +13,7 @@ Three features that don't exist in other AI workflow tools:
 
 ### Cron Ping
 
-Define cron schedules per project. PilotLynx uses tick-based scheduling — no daemon, no background process. You run `plynx schedule tick` from a system cron entry and it figures out what's due.
+Define cron schedules per project. PilotLynx uses tick-based scheduling — no daemon, no background process. You run `pilotlynx schedule tick` from a system cron entry and it figures out what's due.
 
 **`schedule.yaml`** (in each project):
 
@@ -42,15 +42,15 @@ schedules:
 
 Missed runs older than **7 days** are always discarded regardless of policy.
 
-`plynx init` auto-installs a system cron entry (`*/15 * * * *`) so scheduling works out of the box. Each tick also runs the self-improvement loop automatically (once per 24h, configurable).
+`pilotlynx init` auto-installs a system cron entry (`*/15 * * * *`) so scheduling works out of the box. Each tick also runs the self-improvement loop automatically (once per 24h, configurable).
 
 ```bash
-plynx schedule status myproject   # see what's scheduled, last/next runs
+pilotlynx schedule status myproject   # see what's scheduled, last/next runs
 ```
 
 ### Self-Improvement Loop
 
-`plynx improve` triggers a two-phase cycle that makes projects learn from their own run history:
+`pilotlynx improve` triggers a two-phase cycle that makes projects learn from their own run history:
 
 **Phase 1 — Observation (Lynx-owned, read-only):** Reads conversation logs, user feedback, and run outcomes across all projects. Produces per-project summaries and cross-project insights (stored in `pilotlynx/shared/insights/`).
 
@@ -58,7 +58,7 @@ plynx schedule status myproject   # see what's scheduled, last/next runs
 
 Key design constraint: **Lynx never writes project files.** The orchestrator observes and triggers; only the project's own agent modifies its files.
 
-Auto-runs via `schedule tick` once per 24h. Manual trigger anytime with `plynx improve`. Toggle in `plynx.yaml`:
+Auto-runs via `schedule tick` once per 24h. Manual trigger anytime with `pilotlynx improve`. Toggle in `pilotlynx.yaml`:
 
 ```yaml
 autoImprove:
@@ -66,8 +66,8 @@ autoImprove:
 ```
 
 ```bash
-plynx insights                    # view cross-project insights
-plynx insights --since 2025-01-10 # filter by date
+pilotlynx insights                    # view cross-project insights
+pilotlynx insights --since 2025-01-10 # filter by date
 ```
 
 ### Shared Env
@@ -97,13 +97,13 @@ projects:
 **Inspect and export:**
 
 ```bash
-plynx env myproject              # dotenv format
-plynx env myproject --export     # export KEY=value (eval-able)
-plynx env myproject --json       # {"KEY": "value"}
-plynx link myproject --direnv    # generate .envrc for MCP server ${VAR} expansion
+pilotlynx env myproject              # dotenv format
+pilotlynx env myproject --export     # export KEY=value (eval-able)
+pilotlynx env myproject --json       # {"KEY": "value"}
+pilotlynx link myproject --direnv    # generate .envrc for MCP server ${VAR} expansion
 ```
 
-**Auto-migration:** When you adopt an existing project with `plynx project add`, PilotLynx detects secrets in the project's `.env` and `.mcp.json` literals, consolidates them into the central store, and updates the policy — no manual copy-paste.
+**Auto-migration:** When you adopt an existing project with `pilotlynx project add`, PilotLynx detects secrets in the project's `.env` and `.mcp.json` literals, consolidates them into the central store, and updates the policy — no manual copy-paste.
 
 **Default is deny-all.** No policy file = zero secrets injected. See [`docs/secrets-and-mcp.md`](docs/secrets-and-mcp.md) for the full guide.
 
@@ -155,7 +155,7 @@ npm install -g pilotlynx
 
 ```bash
 mkdir my-agents && cd my-agents
-plynx init --name my-agents
+pilotlynx init --name my-agents
 ```
 
 This creates:
@@ -163,7 +163,7 @@ This creates:
 ```
 my-agents/
   pilotlynx/              # config directory
-    plynx.yaml            # workspace marker
+    pilotlynx.yaml            # workspace marker
     projects.yaml         # project registry (name → path)
     template/             # project scaffold template
     shared/policies/      # secrets + tool access policies
@@ -172,16 +172,16 @@ my-agents/
     .gitignore
 ```
 
-It also writes a global config at `~/.config/pilotlynx/config.yaml` (Linux) so the CLI works from any directory, and installs a cron entry for `plynx schedule tick` every 15 minutes.
+It also writes a global config at `~/.config/pilotlynx/config.yaml` (Linux) so the CLI works from any directory, and installs a cron entry for `pilotlynx schedule tick` every 15 minutes.
 
 ### 2. Create or add a project
 
 ```bash
 # Create a new project from template
-plynx project create myproject
+pilotlynx project create myproject
 
 # Or adopt an existing directory (at any path)
-plynx project add myrepo --path /path/to/existing/repo
+pilotlynx project add myrepo --path /path/to/existing/repo
 ```
 
 `create` scaffolds from the template into `myproject/` (at the workspace root) with:
@@ -198,7 +198,7 @@ Both commands register the project in `pilotlynx/projects.yaml` and prompt for s
 ### 3. Run a workflow
 
 ```bash
-plynx run myproject daily_feedback
+pilotlynx run myproject daily_feedback
 ```
 
 Loads secrets from `.env` per the project's allowlist, then executes the workflow.
@@ -206,7 +206,7 @@ Loads secrets from `.env` per the project's allowlist, then executes the workflo
 ### 4. Check project structure
 
 ```bash
-plynx verify myproject
+pilotlynx verify myproject
 ```
 
 Reports missing files or directories.
@@ -215,21 +215,21 @@ Reports missing files or directories.
 
 | Command | What it does |
 |---------|-------------|
-| `plynx init` | Create a new workspace |
-| `plynx project create <name>` | Scaffold a project from template |
-| `plynx project add <name> --path <dir>` | Add an existing directory as a project |
-| `plynx projects list` | List all projects with paths |
-| `plynx run <project> <workflow>` | Run a workflow with secrets injection |
-| `plynx verify <project>` | Validate project structure |
-| `plynx improve` | Run self-improvement loop across projects |
-| `plynx schedule tick` | Run due scheduled workflows |
-| `plynx schedule status <project>` | Show schedules, last/next run times, auto-improve state |
-| `plynx logs <project>` | View recent run logs (`--last`, `--workflow`, `--failures`) |
-| `plynx insights` | View cross-project insights (`--last`, `--since`) |
-| `plynx sync template <project>` | Apply template updates to a project |
-| `plynx env <project>` | Output policy-filtered secrets (`--export`, `--json`, `--envrc`) |
-| `plynx link <project>` | Configure a project for direct access (`--direnv` for `.envrc`) |
-| `plynx unlink <project>` | Remove direct-access configuration |
+| `pilotlynx init` | Create a new workspace |
+| `pilotlynx project create <name>` | Scaffold a project from template |
+| `pilotlynx project add <name> --path <dir>` | Add an existing directory as a project |
+| `pilotlynx projects list` | List all projects with paths |
+| `pilotlynx run <project> <workflow>` | Run a workflow with secrets injection |
+| `pilotlynx verify <project>` | Validate project structure |
+| `pilotlynx improve` | Run self-improvement loop across projects |
+| `pilotlynx schedule tick` | Run due scheduled workflows |
+| `pilotlynx schedule status <project>` | Show schedules, last/next run times, auto-improve state |
+| `pilotlynx logs <project>` | View recent run logs (`--last`, `--workflow`, `--failures`) |
+| `pilotlynx insights` | View cross-project insights (`--last`, `--since`) |
+| `pilotlynx sync template <project>` | Apply template updates to a project |
+| `pilotlynx env <project>` | Output policy-filtered secrets (`--export`, `--json`, `--envrc`) |
+| `pilotlynx link <project>` | Configure a project for direct access (`--direnv` for `.envrc`) |
+| `pilotlynx unlink <project>` | Remove direct-access configuration |
 
 ## Other Features
 
@@ -243,11 +243,11 @@ Reports missing files or directories.
 
 ## Architecture: CLI = Agent SDK
 
-The CLI is a thin wrapper around Claude Agent SDK agents. Every `plynx` command invokes a dedicated agent, making the CLI a convenience layer rather than the primary execution surface.
+The CLI is a thin wrapper around Claude Agent SDK agents. Every `pilotlynx` command invokes a dedicated agent, making the CLI a convenience layer rather than the primary execution surface.
 
-- **Each command = one agent.** `plynx project create foo` runs a "project-create" agent that scaffolds the directory from the template.
+- **Each command = one agent.** `pilotlynx project create foo` runs a "project-create" agent that scaffolds the directory from the template.
 - **Most CLI commands have corresponding Claude Code skills** for use inside projects.
-- **Business logic lives in agents.** Exception: `plynx init` scaffolds the workspace directly since no workspace exists yet for agent context.
+- **Business logic lives in agents.** Exception: `pilotlynx init` scaffolds the workspace directly since no workspace exists yet for agent context.
 
 ## Working Directly in a Project
 
@@ -256,7 +256,7 @@ PilotLynx stores its config location in a global file (`~/.config/pilotlynx/conf
 For MCP servers that need secrets via `${VAR}` expansion, use [direnv](https://direnv.net/):
 
 ```bash
-plynx link myproject --direnv   # generates .envrc with policy-filtered secrets
+pilotlynx link myproject --direnv   # generates .envrc with policy-filtered secrets
 cd myproject && direnv allow     # activate
 ```
 
@@ -328,8 +328,8 @@ Each project should support these baseline workflows:
 ## Claude Code Compatibility
 
 - The workspace can be opened directly in Claude Code.
-- `plynx` works from the workspace root, from project directories (via global config), and from any other location.
-- `plynx link --direnv` generates `.envrc` for MCP servers that need secrets via `${VAR}` expansion.
+- `pilotlynx` works from the workspace root, from project directories (via global config), and from any other location.
+- `pilotlynx link --direnv` generates `.envrc` for MCP servers that need secrets via `${VAR}` expansion.
 - Each CLI command maps to a Claude Code skill — same agent, same behavior.
 
 ## Design Decisions

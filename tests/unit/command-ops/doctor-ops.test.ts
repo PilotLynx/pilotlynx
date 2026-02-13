@@ -16,7 +16,7 @@ describe('doctor-ops', () => {
   function setupFullWorkspace() {
     // Create workspace marker
     writeFileSync(
-      join(configDir, 'plynx.yaml'),
+      join(configDir, 'pilotlynx.yaml'),
       YAML.stringify({ version: 1, name: 'test-ws' })
     );
 
@@ -39,7 +39,7 @@ describe('doctor-ops', () => {
   }
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-test-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-test-'));
     configDir = join(tmpDir, CONFIG_DIR_NAME);
     mkdirSync(configDir, { recursive: true });
     process.env.PILOTLYNX_ROOT = configDir;
@@ -67,22 +67,22 @@ describe('doctor-ops', () => {
     expect(configRootCheck?.status).toBe('pass');
   });
 
-  it('reports pass for workspace marker when plynx.yaml exists', () => {
+  it('reports pass for workspace marker when pilotlynx.yaml exists', () => {
     setupFullWorkspace();
     const checks = runDoctorChecks();
     const markerCheck = checks.find(c => c.name === 'Workspace marker');
     expect(markerCheck?.status).toBe('pass');
   });
 
-  it('reports fail for workspace marker when plynx.yaml is missing', () => {
-    // No plynx.yaml
+  it('reports fail for workspace marker when pilotlynx.yaml is missing', () => {
+    // No pilotlynx.yaml
     const checks = runDoctorChecks();
     const markerCheck = checks.find(c => c.name === 'Workspace marker');
     expect(markerCheck?.status).toBe('fail');
   });
 
   it('reports warn for .env when not present', () => {
-    writeFileSync(join(configDir, 'plynx.yaml'), YAML.stringify({ version: 1, name: 'x' }));
+    writeFileSync(join(configDir, 'pilotlynx.yaml'), YAML.stringify({ version: 1, name: 'x' }));
     const checks = runDoctorChecks();
     const envCheck = checks.find(c => c.name === '.env file');
     expect(envCheck?.status).toBe('warn');
@@ -147,7 +147,7 @@ describe('doctor-ops', () => {
   });
 
   it('reports warn for template directory not found', () => {
-    writeFileSync(join(configDir, 'plynx.yaml'), YAML.stringify({ version: 1, name: 'x' }));
+    writeFileSync(join(configDir, 'pilotlynx.yaml'), YAML.stringify({ version: 1, name: 'x' }));
     const checks = runDoctorChecks();
     const templateCheck = checks.find(c => c.name === 'Template directory');
     expect(templateCheck?.status).toBe('warn');

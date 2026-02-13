@@ -8,7 +8,7 @@ describe('detectProjectSecrets', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-secrets-migration-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-secrets-migration-'));
   });
 
   afterEach(() => {
@@ -94,7 +94,7 @@ describe('buildMigrationPlan', () => {
   let centralEnvPath: string;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-migration-plan-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-migration-plan-'));
     projectDir = join(tmpDir, 'myproject');
     mkdirSync(projectDir, { recursive: true });
     centralEnvPath = join(tmpDir, 'central.env');

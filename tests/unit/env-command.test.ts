@@ -25,17 +25,17 @@ function runCli(args: string[], env?: Record<string, string>): { output: string;
   }
 }
 
-describe('plynx env command', () => {
+describe('pilotlynx env command', () => {
   let tmpDir: string;
   let configDir: string;
   const origRoot = process.env.PILOTLYNX_ROOT;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-env-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-env-'));
     configDir = join(tmpDir, CONFIG_DIR_NAME);
     mkdirSync(configDir, { recursive: true });
     mkdirSync(join(configDir, 'shared', 'policies'), { recursive: true });
-    writeFileSync(join(configDir, 'plynx.yaml'), YAML.stringify({ version: 1, name: 'test' }));
+    writeFileSync(join(configDir, 'pilotlynx.yaml'), YAML.stringify({ version: 1, name: 'test' }));
 
     // Register a project
     const projectDir = join(tmpDir, 'myproject');

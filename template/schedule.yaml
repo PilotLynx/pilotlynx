@@ -1,5 +1,5 @@
 # Schedule configuration for automated workflow execution.
-# Run `plynx schedule tick` to evaluate and execute due workflows.
+# Run `pilotlynx schedule tick` to evaluate and execute due workflows.
 # Cron expressions follow standard 5-field format (min hour dom mon dow).
 schedules: []
 #  - workflow: daily_feedback

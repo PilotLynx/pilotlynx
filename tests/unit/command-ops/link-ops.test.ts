@@ -14,7 +14,7 @@ describe('link-ops', () => {
   const origEnv = process.env.PILOTLYNX_ROOT;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-link-ops-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-link-ops-'));
     configDir = join(tmpDir, CONFIG_DIR_NAME);
     projectDir = join(tmpDir, 'proj');
     process.env.PILOTLYNX_ROOT = configDir;

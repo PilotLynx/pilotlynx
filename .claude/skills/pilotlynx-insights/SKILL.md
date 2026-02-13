@@ -1,5 +1,5 @@
 ---
-name: plynx-insights
+name: pilotlynx-insights
 description: View cross-project insights from the self-improvement loop
 argument-hint: [--last <n>] [--since <date>]
 allowed-tools: Bash

@@ -11,7 +11,7 @@ describe('global-config', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'plynx-gc-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-gc-'));
     // Point XDG_CONFIG_HOME so env-paths('pilotlynx') → tmpDir/pilotlynx/
     process.env.XDG_CONFIG_HOME = tmpDir;
   });
