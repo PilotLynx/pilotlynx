@@ -3,9 +3,7 @@ import { getProjectDir, SHARED_DOCS_DIR, INSIGHTS_DIR } from '../lib/config.js';
 import { buildProjectTools } from '../lib/tools.js';
 import { loadPrompt } from '../lib/prompts.js';
 import { detectSandbox } from '../lib/sandbox.js';
-import { pathEnforcementCallback } from '../lib/callbacks.js';
-
-export { pathEnforcementCallback } from '../lib/callbacks.js';
+import { pathEnforcementCallback, feedbackPathEnforcementCallback } from '../lib/callbacks.js';
 
 export function getRunAgentConfig(
   project: string,
@@ -27,10 +25,13 @@ export function getRunAgentConfig(
     console.error('[pilotlynx] Filesystem sandbox: regex-only (bwrap not available)');
   }
 
+  const isFeedbackRun = !!feedbackPrompt;
+  const additionalDirs = [SHARED_DOCS_DIR(), INSIGHTS_DIR()];
+
   return {
     prompt,
     cwd: projectDir,
-    additionalDirectories: [SHARED_DOCS_DIR(), INSIGHTS_DIR()],
+    additionalDirectories: additionalDirs,
     env: projectEnv,
     allowedTools: toolPolicy.allowedTools.length > 0 ? toolPolicy.allowedTools : undefined,
     disallowedTools: toolPolicy.disallowedTools.length > 0 ? toolPolicy.disallowedTools : undefined,
@@ -38,7 +39,9 @@ export function getRunAgentConfig(
     systemPrompt: { type: 'preset', preset: 'claude_code' },
     permissionMode: 'bypassPermissions',
     allowDangerouslySkipPermissions: true,
-    maxTurns: 50,
-    canUseTool: pathEnforcementCallback(projectDir, [SHARED_DOCS_DIR(), INSIGHTS_DIR()]),
+    maxTurns: isFeedbackRun ? 20 : 50,
+    canUseTool: isFeedbackRun
+      ? feedbackPathEnforcementCallback(projectDir, additionalDirs)
+      : pathEnforcementCallback(projectDir, additionalDirs),
   };
 }

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { mkdtempSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { projectSetupCallback } from '../../src/lib/callbacks.js';
+import { projectSetupCallback, feedbackPathEnforcementCallback } from '../../src/lib/callbacks.js';
 
 describe('projectSetupCallback', () => {
   let tmpDir: string;
@@ -117,6 +117,108 @@ describe('projectSetupCallback', () => {
       setup();
       const callback = projectSetupCallback(projectDir, policiesDir);
       const result = await callback('Glob', { path: '/any/path' });
+      expect(result.behavior).toBe('allow');
+    });
+  });
+});
+
+describe('feedbackPathEnforcementCallback', () => {
+  let tmpDir: string;
+  let projectDir: string;
+
+  function setup() {
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-feedback-cb-'));
+    projectDir = join(tmpDir, 'myproject');
+    mkdirSync(join(projectDir, '.claude'), { recursive: true });
+  }
+
+  describe('denied files', () => {
+    it('denies Write to .mcp.json', async () => {
+      setup();
+      const callback = feedbackPathEnforcementCallback(projectDir);
+      const result = await callback('Write', { file_path: join(projectDir, '.mcp.json') });
+      expect(result.behavior).toBe('deny');
+      if (result.behavior === 'deny') {
+        expect(result.message).toContain('.mcp.json');
+      }
+    });
+
+    it('denies Edit to .claude/settings.json', async () => {
+      setup();
+      const callback = feedbackPathEnforcementCallback(projectDir);
+      const result = await callback('Edit', { file_path: join(projectDir, '.claude/settings.json') });
+      expect(result.behavior).toBe('deny');
+      if (result.behavior === 'deny') {
+        expect(result.message).toContain('settings.json');
+      }
+    });
+
+    it('denies Write to .claude/settings.local.json', async () => {
+      setup();
+      const callback = feedbackPathEnforcementCallback(projectDir);
+      const result = await callback('Write', { file_path: join(projectDir, '.claude/settings.local.json') });
+      expect(result.behavior).toBe('deny');
+    });
+  });
+
+  describe('allowed files', () => {
+    it('allows Write to memory files', async () => {
+      setup();
+      const callback = feedbackPathEnforcementCallback(projectDir);
+      const result = await callback('Write', { file_path: join(projectDir, 'memory/MEMORY.md') });
+      expect(result.behavior).toBe('allow');
+    });
+
+    it('allows Write to .claude/skills/', async () => {
+      setup();
+      const callback = feedbackPathEnforcementCallback(projectDir);
+      const result = await callback('Write', { file_path: join(projectDir, '.claude/skills/new-skill.md') });
+      expect(result.behavior).toBe('allow');
+    });
+
+    it('allows Write to .claude/rules/', async () => {
+      setup();
+      const callback = feedbackPathEnforcementCallback(projectDir);
+      const result = await callback('Write', { file_path: join(projectDir, '.claude/rules/new-rule.md') });
+      expect(result.behavior).toBe('allow');
+    });
+
+    it('allows Read of .mcp.json (reading is fine)', async () => {
+      setup();
+      const callback = feedbackPathEnforcementCallback(projectDir);
+      const result = await callback('Read', { file_path: join(projectDir, '.mcp.json') });
+      expect(result.behavior).toBe('allow');
+    });
+
+    it('allows Read of .claude/settings.json', async () => {
+      setup();
+      const callback = feedbackPathEnforcementCallback(projectDir);
+      const result = await callback('Read', { file_path: join(projectDir, '.claude/settings.json') });
+      expect(result.behavior).toBe('allow');
+    });
+  });
+
+  describe('path enforcement', () => {
+    it('denies Write outside project directory', async () => {
+      setup();
+      const callback = feedbackPathEnforcementCallback(projectDir);
+      const result = await callback('Write', { file_path: '/tmp/evil.txt' });
+      expect(result.behavior).toBe('deny');
+    });
+
+    it('denies Read outside project directory', async () => {
+      setup();
+      const callback = feedbackPathEnforcementCallback(projectDir);
+      const result = await callback('Read', { file_path: '/etc/passwd' });
+      expect(result.behavior).toBe('deny');
+    });
+
+    it('allows access to additional directories', async () => {
+      setup();
+      const sharedDir = join(tmpDir, 'shared');
+      mkdirSync(sharedDir, { recursive: true });
+      const callback = feedbackPathEnforcementCallback(projectDir, [sharedDir]);
+      const result = await callback('Read', { file_path: join(sharedDir, 'docs/patterns/retry.md') });
       expect(result.behavior).toBe('allow');
     });
   });

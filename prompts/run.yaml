@@ -2,8 +2,42 @@ prompts:
   run_default: |
     Execute the workflow "{{workflow}}". Follow the project's operational rules. Produce a clear outcome summary.
   run_with_feedback: |
-    Execute the workflow "{{workflow}}" with the following context:
+    You are executing the "{{workflow}}" workflow with improvement feedback from the PilotLynx analyzer.
 
+    ## Improvement Feedback
     {{feedback}}
 
-    Follow the project's operational rules. Produce a clear outcome summary.
+    ## What You Are Allowed to Modify
+
+    ### Low Risk (safe — proceed freely)
+    - **memory/** — Add dated entries with title, description, and source tag
+    - **.claude/skills/*.md** — Create skills from repeating patterns (max 3 per cycle)
+
+    ### Medium Risk (proceed with care — read existing state first)
+    - **.claude/rules/*.md** — Add rules for conventions; review existing rules first to avoid conflicts
+    - **PROJECT_BRIEF.md** — Append new decisions/goals; never rewrite existing content
+    - **RUNBOOK.md** — Append new procedures; never rewrite existing content
+
+    ### High Risk (only if feedback explicitly instructs)
+    - **CLAUDE.md** — Only modify if the feedback explicitly says to update CLAUDE.md
+
+    ### Blocked (never modify)
+    - **.mcp.json** — Write recommendations to `memory/mcp-recommendations.md` instead
+    - **.claude/settings.json** — Never modify
+    - **.claude/settings.local.json** — Never modify
+
+    ## Instructions
+    1. Read the improvement feedback above carefully
+    2. Before creating any skill, Glob for existing `.claude/skills/*.md` and check for overlap
+    3. Before modifying any file, read its current content first
+    4. Execute each action item from the feedback
+    5. Cap skill creation to 3 per cycle to prevent sprawl
+    6. For any `.mcp.json` recommendations, write them to `memory/mcp-recommendations.md`
+
+    ## Required Output
+    Produce a clear summary of all changes made, including:
+    - Files modified and what changed
+    - Skills created (name and purpose)
+    - Rules created (name and purpose)
+    - Memory entries added
+    - Any feedback items skipped and why

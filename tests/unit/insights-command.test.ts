@@ -98,4 +98,65 @@ describe('insights command', () => {
     const files = readdirSync(dir).filter((f) => f.endsWith('.md'));
     expect(files).toHaveLength(1);
   });
+
+  describe('structured JSON insights', () => {
+    function writeJsonInsights(filename: string, insights: any[]) {
+      writeFileSync(join(insightsDir, filename), JSON.stringify(insights, null, 2));
+    }
+
+    it('reads structured JSON insight files', () => {
+      writeJsonInsights('2025-01-15.json', [
+        { id: 'ins-001', category: 'cost', insight: 'Reduce tokens', actionable: true, evidence: 'data', date: '2025-01-15' },
+      ]);
+
+      const dir = INSIGHTS_DIR();
+      const files = readdirSync(dir).filter((f) => f.endsWith('.json'));
+      expect(files).toHaveLength(1);
+      const content = JSON.parse(readFileSync(join(dir, files[0]), 'utf8'));
+      expect(content).toHaveLength(1);
+      expect(content[0].category).toBe('cost');
+    });
+
+    it('filters insights by category', () => {
+      writeJsonInsights('2025-01-15.json', [
+        { id: 'ins-001', category: 'cost', insight: 'Reduce tokens', actionable: true, evidence: 'data', date: '2025-01-15' },
+        { id: 'ins-002', category: 'reliability', insight: 'Add retries', actionable: true, evidence: 'logs', date: '2025-01-15' },
+        { id: 'ins-003', category: 'cost', insight: 'Optimize prompts', actionable: true, evidence: 'data', date: '2025-01-15' },
+      ]);
+
+      const dir = INSIGHTS_DIR();
+      const content = JSON.parse(readFileSync(join(dir, '2025-01-15.json'), 'utf8'));
+      const filtered = content.filter((i: any) => i.category === 'cost');
+      expect(filtered).toHaveLength(2);
+      expect(filtered.every((i: any) => i.category === 'cost')).toBe(true);
+    });
+
+    it('filters active (non-superseded) insights', () => {
+      writeJsonInsights('2025-01-15.json', [
+        { id: 'ins-001', category: 'cost', insight: 'Old insight', actionable: true, evidence: 'data', date: '2025-01-15' },
+        { id: 'ins-002', category: 'cost', insight: 'New insight', actionable: true, evidence: 'data', date: '2025-01-15', supersedes: 'ins-001' },
+      ]);
+
+      const dir = INSIGHTS_DIR();
+      const content = JSON.parse(readFileSync(join(dir, '2025-01-15.json'), 'utf8'));
+      const supersededIds = new Set(content.filter((i: any) => i.supersedes).map((i: any) => i.supersedes));
+      const active = content.filter((i: any) => !supersededIds.has(i.id));
+      expect(active).toHaveLength(1);
+      expect(active[0].id).toBe('ins-002');
+    });
+
+    it('excludes improve-log and feedback-log from structured queries', () => {
+      writeJsonInsights('2025-01-15.json', [
+        { id: 'ins-001', category: 'cost', insight: 'Real insight', actionable: true, evidence: 'data', date: '2025-01-15' },
+      ]);
+      writeFileSync(join(insightsDir, 'improve-log-2025-01-15.json'), '{}');
+      writeFileSync(join(insightsDir, 'feedback-log.json'), '[]');
+
+      const dir = INSIGHTS_DIR();
+      const files = readdirSync(dir)
+        .filter((f) => f.endsWith('.json') && !f.startsWith('improve-log') && !f.startsWith('feedback-log'));
+      expect(files).toHaveLength(1);
+      expect(files[0]).toBe('2025-01-15.json');
+    });
+  });
 });

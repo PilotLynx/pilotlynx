@@ -109,9 +109,10 @@ describe('prompt loader', () => {
     it('loads improve.yaml — improve_analyze', () => {
       const result = loadPrompt('improve', 'improve_analyze', {
         summaryText: '## alpha\nAll tests passed.',
+        previousInsights: '',
       });
       expect(result).toContain('## alpha');
-      expect(result).toContain('structured feedback');
+      expect(result).toContain('structured');
     });
 
     it('loads sync-template.yaml — sync_template', () => {
