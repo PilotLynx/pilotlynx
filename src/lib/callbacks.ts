@@ -2,6 +2,7 @@ import type { CanUseToolResult } from './types.js';
 import { resolve, basename } from 'node:path';
 import { bashCommandEscapesDir } from './bash-security.js';
 import { wrapInSandbox } from './sandbox.js';
+import type { SandboxOptions } from './sandbox.js';
 
 // Files that feedback agents must never write to
 const FEEDBACK_DENIED_FILES = [
@@ -18,6 +19,11 @@ const SECRETS_PATTERNS = [
   /(?:AKIA|ASIA)[0-9A-Z]{16}/,                    // AWS access key
   /xox[bporas]-[0-9a-zA-Z-]{10,}/,                // Slack token
   /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/,      // Private key PEM
+  /sk-ant-[a-zA-Z0-9_-]{20,}/,                    // Anthropic API key
+  /eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+/,        // JWT token
+  /[a-z]+:\/\/[^:]+:[^@]+@[^\s]+/,                // Connection strings with credentials
+  /xapp-[0-9a-zA-Z-]{10,}/,                       // Slack app-level token
+  /(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)/, // Base64 blocks >40 chars (requires padding suffix)
 ];
 
 /** Check if content appears to contain secrets/credentials. */
@@ -29,6 +35,39 @@ export function containsPotentialSecrets(content: string): string | null {
     }
   }
   return null;
+}
+
+const MAX_OUTPUT_LENGTH = 40_000;
+
+/**
+ * Multi-stage output sanitization for relay mode.
+ * Stage 1: Redact known secret patterns.
+ * Stage 2: Redact literal env values from project environment.
+ * Stage 3: Truncate to length cap.
+ */
+export function sanitizeAgentOutput(text: string, projectEnv: Record<string, string>): string {
+  let sanitized = text;
+
+  // Stage 1: Redact known secret patterns
+  for (const pattern of SECRETS_PATTERNS) {
+    sanitized = sanitized.replace(new RegExp(pattern.source, pattern.flags + (pattern.flags.includes('g') ? '' : 'g')), '[REDACTED]');
+  }
+
+  // Stage 2: Redact literal env values (only values >3 chars to avoid false positives)
+  for (const [key, value] of Object.entries(projectEnv)) {
+    if (value.length > 3) {
+      // Escape special regex chars in the value for safe replacement
+      const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      sanitized = sanitized.replace(new RegExp(escaped, 'g'), `[ENV:${key}]`);
+    }
+  }
+
+  // Stage 3: Length cap
+  if (sanitized.length > MAX_OUTPUT_LENGTH) {
+    sanitized = sanitized.slice(0, MAX_OUTPUT_LENGTH) + '\n[Output truncated]';
+  }
+
+  return sanitized;
 }
 
 /** Returns a function that checks whether a path is inside resolvedDir or any of the additionalDirs. */
@@ -57,6 +96,7 @@ function createDeniedPathChecker(projectDir: string, deniedFiles: string[]): (fi
 export function pathEnforcementCallback(
   projectDir: string,
   additionalDirs: string[] = [],
+  sandboxOptions?: SandboxOptions,
 ): (toolName: string, input: unknown) => Promise<CanUseToolResult> {
   const resolvedProjectDir = resolve(projectDir);
   const resolvedAdditionalDirs = additionalDirs.map(d => resolve(d));
@@ -97,7 +137,7 @@ export function pathEnforcementCallback(
         if (bashCommandEscapesDir(command, resolvedProjectDir)) {
           return { behavior: 'deny', message: `Bash command references paths outside project directory: ${resolvedProjectDir}` };
         }
-        const wrapped = wrapInSandbox(command, resolvedProjectDir, resolvedAdditionalDirs);
+        const wrapped = wrapInSandbox(command, resolvedProjectDir, resolvedAdditionalDirs, sandboxOptions);
         if (wrapped !== command) {
           return { behavior: 'allow', updatedInput: { ...(input as Record<string, unknown>), command: wrapped } };
         }

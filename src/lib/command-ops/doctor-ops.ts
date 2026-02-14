@@ -89,7 +89,7 @@ export function runDoctorChecks(): CheckResult[] {
     const projects = getRegisteredProjects();
     const missing: string[] = [];
     for (const [name, entry] of Object.entries(projects)) {
-      if (!existsSync(entry.absolutePath)) {
+      if (!existsSync(entry.path)) {
         missing.push(name);
       }
     }

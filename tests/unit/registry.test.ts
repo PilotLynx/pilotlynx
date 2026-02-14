@@ -182,7 +182,6 @@ describe('registry', () => {
       const projects = getRegisteredProjects();
       expect(projects.myapp).toBeDefined();
       expect(projects.myapp.path).toBe(projDir);
-      expect(projects.myapp.absolutePath).toBe(projDir);
     });
   });
 });

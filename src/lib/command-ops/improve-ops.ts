@@ -291,6 +291,16 @@ function buildRichLogSummary(project: string, logs: RunRecord[], days: number): 
     sections.push(`### Aggregate (${days}d)\n${statsSection.join('\n')}`);
   }
 
+  // Relay feedback (high-signal negative reactions with follow-up text)
+  try {
+    const relayFeedback = readRelayFeedbackForProject(project);
+    if (relayFeedback.length > 0) {
+      sections.push(`### Relay Feedback (negative)\n${relayFeedback.join('\n')}`);
+    }
+  } catch {
+    // relay feedback not available — skip
+  }
+
   return sections.join('\n\n');
 }
 
@@ -355,6 +365,27 @@ function generateBootstrapFeedback(project: string): string | null {
   if (hasEmptyWorkflows) items.push('- No workflows defined — create workflow files in workflows/');
 
   return items.join('\n');
+}
+
+function readRelayFeedbackForProject(project: string): string[] {
+  const feedbackPath = join(INSIGHTS_DIR(), 'relay-feedback.jsonl');
+  if (!existsSync(feedbackPath)) return [];
+
+  const lines = readFileSync(feedbackPath, 'utf8').split('\n').filter(Boolean);
+  const result: string[] = [];
+
+  for (const line of lines) {
+    try {
+      const entry = JSON.parse(line) as { type: string; project: string; followUpText?: string; timestamp: string };
+      if (entry.project === project && entry.type === 'negative' && entry.followUpText) {
+        result.push(`- ${entry.followUpText} (${entry.timestamp.split('T')[0]})`);
+      }
+    } catch {
+      // skip malformed
+    }
+  }
+
+  return result.slice(-5); // Most recent 5
 }
 
 function isTemplateDefault(filePath: string): boolean {

@@ -85,12 +85,12 @@ export function isRegistered(name: string): boolean {
   return name in registry.projects;
 }
 
-export function getRegisteredProjects(): Record<string, { path: string; absolutePath: string }> {
+export function getRegisteredProjects(): Record<string, { path: string }> {
   const registry = loadRegistry();
-  const result: Record<string, { path: string; absolutePath: string }> = {};
+  const result: Record<string, { path: string }> = {};
 
   for (const [name, entry] of Object.entries(registry.projects)) {
-    result[name] = { path: entry.path, absolutePath: entry.path };
+    result[name] = { path: entry.path };
   }
 
   return result;

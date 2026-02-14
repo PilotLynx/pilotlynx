@@ -53,6 +53,24 @@ export function resetSandboxCache(): void {
 }
 
 /**
+ * Assert that kernel-level sandboxing is available.
+ * Called on relay startup — relay mode refuses to start without a real sandbox.
+ */
+export function assertSandboxAvailable(): void {
+  const info = detectSandbox();
+  if (info.level !== 'kernel') {
+    throw new Error(
+      'Relay mode requires kernel-level sandboxing (bwrap on Linux, sandbox-exec on macOS). ' +
+      'Install bubblewrap: apt install bubblewrap (Debian/Ubuntu) or dnf install bubblewrap (Fedora).'
+    );
+  }
+}
+
+export interface SandboxOptions {
+  networkIsolation?: boolean;
+}
+
+/**
  * Wrap a shell command in a bwrap sandbox if kernel-level sandboxing is
  * available. The sandbox makes the entire filesystem read-only, then
  * overlays a writable bind mount for the project directory.
@@ -66,6 +84,7 @@ export function wrapInSandbox(
   command: string,
   projectDir: string,
   readOnlyDirs: string[] = [],
+  options?: SandboxOptions,
 ): string {
   const info = detectSandbox();
   if (info.level !== 'kernel') return command;
@@ -81,6 +100,10 @@ export function wrapInSandbox(
       '--tmpfs /tmp',
       `--bind ${esc(projectDir)} ${esc(projectDir)}`,
     ];
+
+    if (options?.networkIsolation) {
+      parts.push('--unshare-net');
+    }
 
     for (const dir of readOnlyDirs) {
       parts.push(`--ro-bind ${esc(dir)} ${esc(dir)}`);
@@ -100,7 +123,8 @@ export function wrapInSandbox(
       .map(d => `(allow file-read* (subpath ${JSON.stringify(d)}))`)
       .join(' ');
     const allowWrite = `(allow file-write* (subpath ${JSON.stringify(projectDir)}))`;
-    const profile = `(version 1)(deny default)${allowRead} ${allowWrite}(allow process-exec)(allow process-fork)(allow sysctl-read)(allow mach-lookup)`;
+    const networkRule = options?.networkIsolation ? '' : '(allow network*)';
+    const profile = `(version 1)(deny default)${allowRead} ${allowWrite}(allow process-exec)(allow process-fork)(allow sysctl-read)(allow mach-lookup)${networkRule}`;
     return `sandbox-exec -p ${esc(profile)} bash -c ${esc(command)}`;
   }
 

@@ -113,6 +113,12 @@ export interface RunRecord {
   cacheReadTokens?: number;
   cacheCreationTokens?: number;
   model?: string;
+  relayContext?: {
+    platform: string;
+    channelId: string;
+    conversationId: string;
+    userId: string;
+  };
 }
 
 // ── Workflow Config / Result ──
@@ -214,7 +220,7 @@ export interface AuditEntry {
   timestamp: string;
   project: string;
   workflow: string;
-  triggeredBy: 'cli' | 'schedule' | 'improve';
+  triggeredBy: 'cli' | 'schedule' | 'improve' | 'relay';
   runId: string;
   success: boolean;
   costUsd: number;
@@ -251,17 +257,6 @@ export interface EvalSummary {
   failed: number;
   avgScore: number;
   results: EvalResult[];
-}
-
-// ── Episodic Memory ──
-
-export interface EpisodicMemoryEntry {
-  date: string;
-  workflow: string;
-  result: 'success' | 'failure';
-  cost: number;
-  keyDecisions: string[];
-  tags: string[];
 }
 
 // ── Health Score ──
