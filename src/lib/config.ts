@@ -42,8 +42,8 @@ export function getPackageRoot(): string {
           _packageRoot = dir;
           return dir;
         }
-      } catch {
-        // not valid JSON, keep searching
+      } catch (err) {
+        console.warn(`[pilotlynx] Warning: invalid package.json at ${pkgPath}`, err instanceof Error ? err.message : err);
       }
     }
     const parent = dirname(dir);

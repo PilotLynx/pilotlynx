@@ -25,7 +25,7 @@ const ADMIN_ONLY = new Set(['bind', 'unbind', 'projects']);
 
 /**
  * Parse a text string into an admin command.
- * Matches: /pilotlynx-<cmd>, /pilotlynx <cmd>, !<cmd>, or bare <cmd> for known commands.
+ * Matches: /pilotlynx-<cmd>, /pilotlynx <cmd>, or !<cmd>.
  */
 export function parseCommand(text: string): { command: string; args: string } | null {
   const trimmed = text.trim();
@@ -49,13 +49,6 @@ export function parseCommand(text: string): { command: string; args: string } | 
   if (bang) {
     const cmd = bang[1].toLowerCase();
     if (KNOWN_COMMANDS.has(cmd)) return { command: cmd, args: (bang[2] ?? '').trim() };
-  }
-
-  // bare <command> [args] — only if the first word is a known command
-  const bare = trimmed.match(/^(\S+)\s*(.*)?$/);
-  if (bare) {
-    const cmd = bare[1].toLowerCase();
-    if (KNOWN_COMMANDS.has(cmd)) return { command: cmd, args: (bare[2] ?? '').trim() };
   }
 
   return null;

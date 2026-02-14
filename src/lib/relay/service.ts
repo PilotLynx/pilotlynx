@@ -63,6 +63,10 @@ export class RelayService {
       unlinkSync(pidFile);
     }
 
+    // Write PID file immediately to prevent TOCTOU race
+    writeFileSync(pidFile, String(process.pid), 'utf8');
+
+    try {
     // Initialize SQLite
     const dbPath = getRelayDbPath();
     const dbDir = dirname(dbPath);
@@ -127,19 +131,30 @@ export class RelayService {
     // Recover pending messages from previous crash
     await this.recoverPendingMessages();
 
-    // Start periodic cleanup (every hour)
+    // Start periodic cleanup with budget alerts (every hour)
     this.cleanupTimer = setInterval(() => {
       if (this.db) {
         cleanupStaleData(this.db, 24, 7, 30);
+
+        // Check budget alerts for bound projects
+        if (this.notifier && this.config.notifications.budgetAlerts) {
+          const projects = this.db.prepare('SELECT DISTINCT project FROM bindings').all() as { project: string }[];
+          for (const { project } of projects) {
+            const stats = getRunStats(this.db!, project, 1);
+            const limit = this.config.limits.dailyBudgetPerProject;
+            if (limit > 0 && stats.totalCost >= limit * 0.8) {
+              this.notifier!.notifyBudgetAlert(project, stats.totalCost, limit).catch((err) => {
+                console.error(`[relay] Failed to send budget alert for ${project}:`, err);
+              });
+            }
+          }
+        }
       }
     }, 3_600_000);
     this.cleanupTimer.unref();
 
     // Initial cleanup
     cleanupStaleData(this.db, 24, 7, 30);
-
-    // Write PID file
-    writeFileSync(pidFile, String(process.pid), 'utf8');
 
     // Start health endpoint
     this.healthServer = createServer((req, res) => {
@@ -151,13 +166,18 @@ export class RelayService {
         res.end();
       }
     });
-    this.healthServer.listen(9100);
+    this.healthServer.listen(9100, '127.0.0.1');
     this.healthServer.unref();
 
     this.startedAt = new Date();
     this._running = true;
 
     console.log(`[relay] Service started. Platforms: ${[...this.platforms.keys()].join(', ')}`);
+    } catch (err) {
+      // Clean up PID file on startup failure
+      try { unlinkSync(pidFile); } catch { /* ignore */ }
+      throw err;
+    }
   }
 
   async stop(): Promise<void> {
@@ -180,17 +200,20 @@ export class RelayService {
 
     // Drain the pool (wait up to 5 min for in-flight runs)
     if (this.pool) {
-      const drainTimeout = setTimeout(() => {
-        console.warn('[relay] Drain timeout reached, force-stopping.');
-      }, 300_000);
-      drainTimeout.unref();
-
       try {
-        await this.pool.shutdown();
-      } catch {
-        // Best effort
+        await Promise.race([
+          this.pool.shutdown(),
+          new Promise<void>((resolve) => {
+            const timer = setTimeout(() => {
+              console.warn('[relay] Drain timeout reached, force-stopping.');
+              resolve();
+            }, 300_000);
+            timer.unref();
+          }),
+        ]);
+      } catch (err) {
+        console.error('[relay] Error during pool shutdown:', err);
       }
-      clearTimeout(drainTimeout);
     }
 
     // Stop platforms
@@ -215,8 +238,8 @@ export class RelayService {
     if (existsSync(pidFile)) {
       try {
         unlinkSync(pidFile);
-      } catch {
-        // Non-fatal
+      } catch (err) {
+        console.warn('[relay] Failed to remove PID file:', err);
       }
     }
 
@@ -250,7 +273,7 @@ export class RelayService {
     const signingSecret = env.SLACK_SIGNING_SECRET;
 
     if (!botToken || !appToken) {
-      console.warn('[relay] Slack enabled but SLACK_BOT_TOKEN or SLACK_APP_TOKEN missing in .env');
+      console.error('[relay] Slack enabled but SLACK_BOT_TOKEN or SLACK_APP_TOKEN missing in .env');
       return null;
     }
 
@@ -273,7 +296,7 @@ export class RelayService {
   private async initTelegram(env: Record<string, string>): Promise<ChatPlatform | null> {
     const botToken = env.TELEGRAM_BOT_TOKEN;
     if (!botToken) {
-      console.warn('[relay] Telegram enabled but TELEGRAM_BOT_TOKEN missing in .env');
+      console.error('[relay] Telegram enabled but TELEGRAM_BOT_TOKEN missing in .env');
       return null;
     }
 
@@ -308,8 +331,8 @@ export class RelayService {
           `_Recovered from previous session. Your message "${msg.text.slice(0, 50)}..." is being re-processed._`,
           msg.conversationId,
         );
-      } catch {
-        // Best effort recovery notification
+      } catch (err) {
+        console.warn(`[relay] Failed to send recovery notification for pending message:`, err);
       }
     }
   }
@@ -328,8 +351,13 @@ export async function startRelayService(): Promise<RelayService> {
 
   // Handle graceful shutdown
   const shutdown = async () => {
-    await service.stop();
-    process.exit(0);
+    try {
+      await service.stop();
+    } catch (err) {
+      console.error('[relay] Error during shutdown:', err);
+    } finally {
+      process.exit(0);
+    }
   };
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);

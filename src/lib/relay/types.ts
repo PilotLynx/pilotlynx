@@ -72,7 +72,6 @@ export const RelayLimitsConfigSchema = z.object({
   projectQueueDepth: z.number().min(1).max(100).default(10),
   dailyBudgetPerProject: z.number().min(0).default(10),
   reactionRatePerHour: z.number().min(1).max(1000).default(20),
-  globalConcurrency: z.number().min(1).max(50).default(5),
 });
 
 export const RelayNotificationsConfigSchema = z.object({

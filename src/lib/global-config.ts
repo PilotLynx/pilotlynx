@@ -30,8 +30,8 @@ export function loadGlobalConfig(): GlobalConfig | null {
     const config = GlobalConfigSchema.parse(raw);
     _cache = config;
     return config;
-  } catch {
-    console.warn(`[pilotlynx] Warning: global config is corrupt, ignoring: ${file}`);
+  } catch (err) {
+    console.warn(`[pilotlynx] Warning: global config is corrupt, ignoring: ${file}`, err instanceof Error ? err.message : err);
     _cache = null;
     return null;
   }

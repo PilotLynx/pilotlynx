@@ -313,16 +313,16 @@ export function cleanupStaleData(
   db.prepare(`
     DELETE FROM messages
     WHERE rowid IN (
-      SELECT m.rowid FROM messages m
-      WHERE m.timestamp < ? AND m.timestamp >= ?
-        AND m.rowid NOT IN (
-          SELECT m2.rowid FROM messages m2
-          WHERE m2.platform = m.platform
-            AND m2.channel_id = m.channel_id
-            AND m2.conversation_id = m.conversation_id
-          ORDER BY m2.timestamp DESC
-          LIMIT 10
-        )
+      SELECT rowid FROM (
+        SELECT rowid,
+          ROW_NUMBER() OVER (
+            PARTITION BY platform, channel_id, conversation_id
+            ORDER BY timestamp DESC
+          ) AS rn
+        FROM messages
+        WHERE timestamp < ? AND timestamp >= ?
+      ) ranked
+      WHERE rn > 10
     )
   `).run(coldCutoff, expiredCutoff);
 

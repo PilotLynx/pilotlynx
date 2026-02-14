@@ -21,7 +21,7 @@ afterEach(() => {
 
 function makeChatMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
   return {
-    platform: 'test',
+    platform: 'test-platform',
     channelId: 'C1',
     conversationId: 'conv-1',
     messageId: 'msg-' + Math.random().toString(36).slice(2, 8),

@@ -1,7 +1,7 @@
 // ── Feedback Handler ──
 // Classifies chat reactions as feedback signals and persists them.
 
-import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import type Database from 'better-sqlite3';
 import type { FeedbackSignal } from './platform.js';
@@ -61,14 +61,14 @@ export function appendRelayFeedback(entry: ChatFeedbackEntry): void {
   const dir = dirname(filePath);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 
-  appendFileSync(filePath, JSON.stringify(entry) + '\n', 'utf8');
+  // Read existing content, append new entry, and trim atomically
+  const existing = existsSync(filePath) ? readFileSync(filePath, 'utf8') : '';
+  const lines = existing.split('\n').filter(Boolean);
+  lines.push(JSON.stringify(entry));
 
-  // Check if we need to trim
-  const lines = readFileSync(filePath, 'utf8').split('\n').filter(Boolean);
-  if (lines.length > MAX_ENTRIES) {
-    const trimmed = lines.slice(lines.length - MAX_ENTRIES);
-    writeFileSync(filePath, trimmed.join('\n') + '\n', 'utf8');
-  }
+  // Trim oldest entries if over the cap
+  const kept = lines.length > MAX_ENTRIES ? lines.slice(lines.length - MAX_ENTRIES) : lines;
+  writeFileSync(filePath, kept.join('\n') + '\n', 'utf8');
 }
 
 /**
@@ -161,10 +161,15 @@ export function isReactionRateLimited(userId: string, maxPerHour: number): boole
 
   // Prune old entries
   const recent = timestamps.filter((t) => t > cutoff);
-  reactionTimestamps.set(userId, recent);
+  if (recent.length === 0) {
+    reactionTimestamps.delete(userId);
+  } else {
+    reactionTimestamps.set(userId, recent);
+  }
 
   if (recent.length >= maxPerHour) return true;
 
   recent.push(now);
+  reactionTimestamps.set(userId, recent);
   return false;
 }

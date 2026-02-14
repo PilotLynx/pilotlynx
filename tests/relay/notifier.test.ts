@@ -44,7 +44,6 @@ const baseConfig: RelayConfig = {
     projectQueueDepth: 10,
     dailyBudgetPerProject: 10,
     reactionRatePerHour: 20,
-    globalConcurrency: 5,
   },
   notifications: {
     scheduleFailures: true,

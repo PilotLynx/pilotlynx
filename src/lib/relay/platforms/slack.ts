@@ -7,6 +7,7 @@ import type {
   PlatformCapabilities,
   StreamHandle,
 } from '../platform.js';
+import type { App, SlackEvent, SlackContext, SlackCommand, SlackMessage } from '@slack/bolt';
 
 export interface SlackAdapterConfig {
   botToken: string;
@@ -42,13 +43,12 @@ export class SlackAdapter implements ChatPlatform {
     args: string,
   ) => Promise<string> = async () => '';
 
-  private app: any; // Bolt App – dynamically imported
+  private app!: App;
   private botUserId: string | undefined;
   private userCache = new Map<string, string>(); // userId → displayName
   private reconnectBackoff = 1000;
   private lastEventTime = Date.now();
   private healthTimer: NodeJS.Timeout | undefined;
-  private processedRetries = new Set<string>(); // dedup x-slack-retry-num
 
   constructor(private config: SlackAdapterConfig) {}
 
@@ -64,7 +64,7 @@ export class SlackAdapter implements ChatPlatform {
     });
 
     // ── Event: app_mention ──
-    this.app.event('app_mention', async ({ event, context }: any) => {
+    this.app.event('app_mention', async ({ event, context }: { event: SlackEvent; context: SlackContext }) => {
       if (this.shouldSkipRetry(context)) return;
       this.lastEventTime = Date.now();
       const msg = await this.slackEventToChatMessage(event);
@@ -72,7 +72,7 @@ export class SlackAdapter implements ChatPlatform {
     });
 
     // ── Event: message ──
-    this.app.event('message', async ({ event, context }: any) => {
+    this.app.event('message', async ({ event, context }: { event: SlackEvent; context: SlackContext }) => {
       if (this.shouldSkipRetry(context)) return;
       if (event.subtype && event.subtype !== 'file_share') return;
       this.lastEventTime = Date.now();
@@ -81,19 +81,19 @@ export class SlackAdapter implements ChatPlatform {
     });
 
     // ── Event: reaction_added ──
-    this.app.event('reaction_added', async ({ event, context }: any) => {
+    this.app.event('reaction_added', async ({ event, context }: { event: SlackEvent & { item: { channel: string; ts: string }; reaction: string }; context: SlackContext }) => {
       if (this.shouldSkipRetry(context)) return;
       this.lastEventTime = Date.now();
       await this.onReaction(
         event.item.channel,
         event.item.ts,
-        event.user,
+        event.user!,
         event.reaction,
       );
     });
 
     // ── Slash command: /pilotlynx-bind ──
-    this.app.command('/pilotlynx-bind', async ({ command, ack }: any) => {
+    this.app.command('/pilotlynx-bind', async ({ command, ack }: { command: SlackCommand; ack: () => Promise<void> }) => {
       await ack();
       this.lastEventTime = Date.now();
       const response = await this.onCommand(
@@ -220,18 +220,8 @@ export class SlackAdapter implements ChatPlatform {
 
   // ── Helpers ──
 
-  private shouldSkipRetry(context: any): boolean {
-    const retryNum = context?.retryNum;
-    if (retryNum == null) return false;
-    const key = `${retryNum}`;
-    if (this.processedRetries.has(key)) return true;
-    this.processedRetries.add(key);
-    // Prevent memory leak – prune old entries periodically
-    if (this.processedRetries.size > 1000) {
-      const entries = Array.from(this.processedRetries);
-      this.processedRetries = new Set(entries.slice(-500));
-    }
-    return false;
+  private shouldSkipRetry(context: SlackContext): boolean {
+    return context?.retryNum != null;
   }
 
   private async resolveUserName(userId: string): Promise<string> {
@@ -243,16 +233,19 @@ export class SlackAdapter implements ChatPlatform {
       const name =
         result.user?.profile?.display_name ||
         result.user?.real_name ||
-        result.user?.name ||
-        userId;
-      this.userCache.set(userId, name);
-      return name;
+        result.user?.name;
+      if (name) {
+        this.userCache.set(userId, name);
+        return name;
+      }
+      return userId;
     } catch {
+      // Don't cache on API failure — allow retry on next call
       return userId;
     }
   }
 
-  private async slackEventToChatMessage(event: any): Promise<ChatMessage> {
+  private async slackEventToChatMessage(event: SlackEvent): Promise<ChatMessage> {
     const isBot = !!(event.bot_id || event.user === this.botUserId);
     const userName = isBot
       ? 'bot'
@@ -273,7 +266,7 @@ export class SlackAdapter implements ChatPlatform {
 
   private async slackMsgToChatMessage(
     channelId: string,
-    msg: any,
+    msg: SlackMessage,
   ): Promise<ChatMessage> {
     const isBot = !!(msg.bot_id || msg.user === this.botUserId);
     const userName = isBot
@@ -301,8 +294,8 @@ export class SlackAdapter implements ChatPlatform {
         await this.app.start();
         this.reconnectBackoff = 1000;
         this.lastEventTime = Date.now();
-      } catch {
-        // Will retry on next health check interval
+      } catch (err) {
+        console.warn('[slack] Reconnect attempt failed, will retry on next health check:', err);
       }
     }, this.reconnectBackoff);
   }

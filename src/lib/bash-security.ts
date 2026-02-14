@@ -5,6 +5,14 @@ import { resolve } from 'node:path';
  * whether any resolve to a location outside the allowed directory.
  */
 export function bashCommandEscapesDir(command: string, allowedDir: string): boolean {
+  // Deny multi-line commands (can hide payloads on subsequent lines)
+  if (/\n/.test(command)) return true;
+
+  // Deny piping into a shell interpreter
+  if (/\|\s*(ba)?sh\b/.test(command)) return true;
+  if (/\|\s*zsh\b/.test(command)) return true;
+  if (/\|\s*dash\b/.test(command)) return true;
+
   // Deny shell features that bypass static path analysis
   // Command substitution, variable expansion, process substitution
   if (/\$\(/.test(command)) return true;

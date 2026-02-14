@@ -20,8 +20,8 @@ export function loadScheduleState(project: string): ScheduleState {
   try {
     const raw = JSON.parse(readFileSync(filePath, 'utf8'));
     return ScheduleStateSchema.parse(raw);
-  } catch {
-    console.warn(`[pilotlynx] Warning: schedule state corrupt for ${project}, resetting. Scheduled workflows may re-run.`);
+  } catch (err) {
+    console.warn(`[pilotlynx] Warning: schedule state corrupt for ${project}, resetting. Scheduled workflows may re-run.`, err instanceof Error ? err.message : err);
     return { lastRuns: {} };
   }
 }
@@ -39,7 +39,8 @@ export function loadImproveState(): z.infer<typeof ImproveStateSchema> {
   if (!existsSync(filePath)) return ImproveStateSchema.parse({});
   try {
     return ImproveStateSchema.parse(JSON.parse(readFileSync(filePath, 'utf8')));
-  } catch {
+  } catch (err) {
+    console.warn('[pilotlynx] Warning: improve state corrupt, resetting. Circuit breakers will be lost.', err instanceof Error ? err.message : err);
     return ImproveStateSchema.parse({});
   }
 }

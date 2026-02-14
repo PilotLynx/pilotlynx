@@ -7,7 +7,7 @@ import type Database from 'better-sqlite3';
 import type { ChatPlatform, ChatMessage, FeedbackSignal } from './platform.js';
 import type { RelayConfig, RelayRunRequest } from './types.js';
 import { lookupBinding } from './bindings.js';
-import { cacheMessage, writePendingMessage, markPendingDone, recordRelayRun, updateRelayRun } from './db.js';
+import { cacheMessage, writePendingMessage, markPendingDone, recordRelayRun, updateRelayRun, getRunStats } from './db.js';
 import { assembleContext } from './context.js';
 import { executeRelayRun } from './executor.js';
 import { formatResponse, addCostFooter } from './poster.js';
@@ -31,11 +31,17 @@ function isUserRateLimited(userId: string, maxPerHour: number): boolean {
   }
 
   const recent = timestamps.filter((t) => t > cutoff);
-  userMessageTimestamps.set(userId, recent);
+
+  if (recent.length === 0) {
+    userMessageTimestamps.delete(userId);
+  } else {
+    userMessageTimestamps.set(userId, recent);
+  }
 
   if (recent.length >= maxPerHour) return true;
 
   recent.push(now);
+  userMessageTimestamps.set(userId, recent);
   return false;
 }
 
@@ -88,6 +94,12 @@ export class RelayRouter {
         }
       }
 
+      if (parsed.command === 'new') {
+        this.db.prepare(
+          `DELETE FROM messages WHERE platform = ? AND channel_id = ? AND conversation_id = ?`,
+        ).run(msg.platform, msg.channelId, msg.conversationId);
+      }
+
       await platform.sendMessage(msg.channelId, response, msg.conversationId);
       return;
     }
@@ -111,6 +123,20 @@ export class RelayRouter {
         msg.conversationId,
       );
       return;
+    }
+
+    // Budget enforcement
+    const dailyBudget = this.config.limits.dailyBudgetPerProject;
+    if (dailyBudget > 0) {
+      const stats = getRunStats(this.db, project, 1);
+      if (stats.totalCost >= dailyBudget) {
+        await platform.sendMessage(
+          msg.channelId,
+          `Daily budget for project "${project}" has been reached. Please try again tomorrow.`,
+          msg.conversationId,
+        );
+        return;
+      }
     }
 
     // Write pending message for crash recovery
@@ -143,16 +169,26 @@ export class RelayRouter {
       }
 
       // Don't await the run promise — it executes in the background via the queue
-      runPromise.catch((err) => {
+      runPromise.catch(async (err) => {
         console.error(`[relay] Run failed for ${project}:`, err);
+        try {
+          markPendingDone(this.db, pendingId);
+          await platform.sendMessage(
+            msg.channelId,
+            'Something went wrong while processing your request. Please try again.',
+            msg.conversationId,
+          );
+        } catch (notifyErr) {
+          console.error('[relay] Failed to notify user of run error:', notifyErr);
+        }
       });
     } catch (err) {
       // Queue full or memory pressure
+      console.error(`[relay] Enqueue failed for ${project}:`, err);
       markPendingDone(this.db, pendingId);
-      const errMsg = err instanceof Error ? err.message : String(err);
       await platform.sendMessage(
         msg.channelId,
-        `Cannot process request: ${errMsg}`,
+        'Cannot process request right now. Please try again later.',
         msg.conversationId,
       );
     }
@@ -173,12 +209,17 @@ export class RelayRouter {
 
     // Check for cancellation reaction (stop_sign on a "Working on it..." message)
     if (emoji === 'stop_sign' || emoji === 'octagonal_sign') {
-      // Find conversation for this message and abort
-      for (const [convId, controller] of this.activeAbortControllers) {
-        controller.abort();
-        this.activeAbortControllers.delete(convId);
-        await platform.sendMessage(channelId, 'Run cancelled.', convId);
-        break;
+      // Look up the conversation_id for this message in the DB
+      const row = this.db.prepare(
+        `SELECT conversation_id FROM messages WHERE message_id = ? AND platform = ? AND channel_id = ? LIMIT 1`,
+      ).get(messageId, platform.name, channelId) as { conversation_id: string } | undefined;
+      if (row) {
+        const controller = this.activeAbortControllers.get(row.conversation_id);
+        if (controller) {
+          controller.abort();
+          this.activeAbortControllers.delete(row.conversation_id);
+          await platform.sendMessage(channelId, 'Run cancelled.', row.conversation_id);
+        }
       }
       return;
     }
@@ -313,7 +354,9 @@ export class RelayRouter {
         prompt,
         abortSignal: abortController.signal,
         onText: (text) => {
-          stream.append(text).catch(() => {});
+          stream.append(text).catch((err) => {
+            console.warn('[relay] Stream append failed:', err instanceof Error ? err.message : String(err));
+          });
         },
       };
 
@@ -367,13 +410,15 @@ export class RelayRouter {
         model: result.model,
         platform: platform.name,
         channelId: msg.channelId,
-      }).catch(() => {});
+      }).catch((err) => {
+        console.error('[relay] Webhook dispatch failed:', err instanceof Error ? err.message : String(err));
+      });
     } catch (err) {
       await stream.stop();
-      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[relay] executeAndPost failed for ${project}:`, err);
       await platform.sendMessage(
         msg.channelId,
-        `Error: ${errMsg}`,
+        'Something went wrong while processing your request. Please try again.',
         msg.conversationId,
       );
 

@@ -7,7 +7,9 @@ export async function sendWebhookNotification(payload: WebhookPayload): Promise<
   if (!config?.enabled) return;
 
   for (const webhook of config.webhooks) {
-    if (!webhook.events.includes(payload.event as WebhookPayload['event'] & string as any)) continue;
+    if (!webhook.events.some((e) => e === payload.event)) continue;
+
+    const body = JSON.stringify(payload);
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -17,7 +19,6 @@ export async function sendWebhookNotification(payload: WebhookPayload): Promise<
 
     if (webhook.secret) {
       const crypto = await import('node:crypto');
-      const body = JSON.stringify(payload);
       const signature = crypto.createHmac('sha256', webhook.secret)
         .update(body)
         .digest('hex');
@@ -28,7 +29,7 @@ export async function sendWebhookNotification(payload: WebhookPayload): Promise<
       await fetch(webhook.url, {
         method: 'POST',
         headers,
-        body: JSON.stringify(payload),
+        body,
         signal: AbortSignal.timeout(10_000),
       });
     } catch (err) {

@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { getConfigRoot } from './config.js';
@@ -33,7 +33,9 @@ export function loadRegistry(): ProjectRegistry {
 
 export function saveRegistry(registry: ProjectRegistry): void {
   const file = registryFile();
-  writeFileSync(file, stringifyYaml(registry), 'utf8');
+  const tmp = file + '.tmp';
+  writeFileSync(tmp, stringifyYaml(registry), 'utf8');
+  renameSync(tmp, file);
   _cache = registry;
 }
 

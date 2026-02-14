@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { mkdtempSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { projectSetupCallback, feedbackPathEnforcementCallback } from '../../src/lib/callbacks.js';
+import { projectSetupCallback, feedbackPathEnforcementCallback, containsPotentialSecrets } from '../../src/lib/callbacks.js';
 
 describe('projectSetupCallback', () => {
   let tmpDir: string;
@@ -119,6 +119,29 @@ describe('projectSetupCallback', () => {
       const result = await callback('Glob', { path: '/any/path' });
       expect(result.behavior).toBe('allow');
     });
+  });
+});
+
+describe('containsPotentialSecrets', () => {
+  it('returns generic message without partial secret text', () => {
+    const secret = 'ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij';
+    const result = containsPotentialSecrets(`token=${secret}`);
+    expect(result).not.toBeNull();
+    expect(result).toBe('Potential secret pattern detected in output.');
+    // Must NOT contain any part of the actual secret
+    expect(result).not.toContain('ghp_');
+    expect(result).not.toContain('ABCDEFGH');
+  });
+
+  it('detects JWT tokens without leaking them', () => {
+    const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyMSJ9.signature';
+    const result = containsPotentialSecrets(jwt);
+    expect(result).toBe('Potential secret pattern detected in output.');
+    expect(result).not.toContain('eyJ');
+  });
+
+  it('returns null for safe content', () => {
+    expect(containsPotentialSecrets('just normal text')).toBeNull();
   });
 });
 

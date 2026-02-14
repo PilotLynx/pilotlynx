@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-PilotLynx (`pilotlynx`) is an npm package providing a CLI for local monorepo orchestration of Claude Agent SDK (TypeScript) workflows across multiple isolated projects. The CLI binaries are `pilotlynx` (primary) and `pilotlynx` (alias), entry point at `dist/cli.js`.
+PilotLynx (`pilotlynx`) is an npm package providing a CLI for local monorepo orchestration of Claude Agent SDK (TypeScript) workflows across multiple isolated projects. The CLI binary is `pilotlynx`, entry point at `dist/cli.js`.
 
 This repo is a **pure npm package** — it contains only the CLI tool and a bundled project template. User workspaces (with `pilotlynx/` config dir and sibling project directories) are created separately via `pilotlynx init`.
 
@@ -65,6 +65,25 @@ Projects are tracked in `pilotlynx/projects.yaml` (name→path mapping). This en
 - `pilotlynx env <project>` — output policy-filtered secrets (dotenv, --export, --json, --envrc)
 - `pilotlynx link <project>` — configure project for direct access (sets PILOTLYNX_ROOT in .claude/settings.json, optional --direnv)
 - `pilotlynx unlink <project>` — remove direct-access configuration
+- `pilotlynx project add <name> --path <dir>` — adopt an existing directory as a project
+- `pilotlynx project remove <name>` — unregister a project
+- `pilotlynx status` — show workspace overview (projects, schedules, recent runs)
+- `pilotlynx cost [project]` — show cost summary across runs
+- `pilotlynx doctor` — check workspace health and prerequisites
+- `pilotlynx eval <project>` — run evaluation test cases
+- `pilotlynx audit <project>` — view audit log entries
+- `pilotlynx logs <project>` — view project run logs
+- `pilotlynx logs-prune <project>` — delete old log files
+- `pilotlynx relay serve` — start the chat relay service
+- `pilotlynx relay stop` — stop the running relay service
+- `pilotlynx relay bind <platform> <channel-id> <project>` — bind a channel to a project
+- `pilotlynx relay unbind <platform> <channel-id>` — remove a channel binding
+- `pilotlynx relay bindings` — list all channel bindings
+- `pilotlynx relay doctor` — check relay prerequisites and recommend settings
+- `pilotlynx relay add <name> --url <url>` — add a webhook endpoint
+- `pilotlynx relay remove <name>` — remove a webhook endpoint
+- `pilotlynx relay test` — send a test payload to all webhooks
+- `pilotlynx relay status` — show configured webhooks
 
 ### Repository Layout (npm package)
 
@@ -110,6 +129,70 @@ my-workspace/                  ← workspace root
   artifacts/              — output artifacts (gitignored)
   logs/                   — run logs (gitignored)
 ```
+
+## Relay Subsystem
+
+The relay subsystem provides bi-directional chat integration, connecting Slack and Telegram channels to project agents.
+
+### Architecture
+
+```
+Service (service.ts) ── orchestrates lifecycle, PID file, health endpoint
+  └─ Router (router.ts) ── central dispatch for messages, reactions, commands
+       ├─ Context (context.ts) ── assembles conversation context from cache + history
+       ├─ Executor (executor.ts) ── runs agent SDK inside project sandbox
+       ├─ Queue (queue.ts) ── concurrency-limited agent pool (p-queue)
+       ├─ Poster (poster.ts) ── formats and sanitizes agent output
+       ├─ Admin (admin.ts) ── handles admin commands (/bind, /unbind, /status)
+       ├─ Feedback (feedback.ts) ── classifies reactions, persists feedback
+       ├─ Notifier (notifier.ts) ── sends proactive notifications to bound channels
+       └─ Platform Adapters
+            ├─ Slack (platforms/slack.ts) ── @slack/bolt socket/HTTP mode
+            └─ Telegram (platforms/telegram.ts) ── grammy long-polling
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/lib/relay/service.ts` | Service lifecycle, PID management, health HTTP endpoint |
+| `src/lib/relay/router.ts` | Message routing, rate limiting, run orchestration |
+| `src/lib/relay/context.ts` | Conversation context assembly with token budget |
+| `src/lib/relay/executor.ts` | Sandboxed agent execution with prompt injection defense |
+| `src/lib/relay/db.ts` | SQLite storage (messages, pending, runs, bindings, threads) |
+| `src/lib/relay/bindings.ts` | Channel-to-project binding CRUD |
+| `src/lib/relay/queue.ts` | Agent pool with per-project concurrency limits |
+| `src/lib/relay/poster.ts` | Response formatting, cost footer, output sanitization |
+| `src/lib/relay/feedback.ts` | Reaction classification, feedback persistence to memory |
+| `src/lib/relay/notify.ts` | Webhook delivery with HMAC signing |
+| `src/lib/relay/notifier.ts` | Proactive channel notifications (schedule, improve, alerts) |
+| `src/lib/relay/config.ts` | Relay/webhook config loading from YAML |
+| `src/lib/relay/types.ts` | Shared types, Zod schemas for relay.yaml |
+| `src/lib/relay/platform.ts` | Platform-agnostic ChatPlatform interface |
+| `src/commands/relay.ts` | CLI command definitions for relay subcommands |
+
+### Configuration
+
+The relay is configured via `pilotlynx/relay.yaml` in the config root:
+
+- **platforms** — enable/disable Slack and Telegram, set modes and ports
+- **agent** — maxConcurrent, timeouts, memory limits, sandbox requirements
+- **context** — token budget, max messages per thread, stale thread TTL
+- **limits** — per-user rate limits, queue depth, daily budget per project
+- **notifications** — schedule failures, improve insights, budget alerts
+- **admins** — platform-specific admin user lists
+
+Webhooks are configured separately in `pilotlynx/webhook.yaml`.
+
+### SQLite Tables
+
+The relay uses a SQLite database (`relay.db` in config root) with WAL mode:
+
+- **bindings** — channel-to-project mappings (platform + channel_id primary key)
+- **threads** — conversation tracking with message counts and summaries
+- **messages** — cached chat messages for context assembly
+- **pending_messages** — WAL for incoming messages awaiting processing
+- **relay_runs** — run history with cost, tokens, duration, model tracking
 
 ## Critical Design Rules
 

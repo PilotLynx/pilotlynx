@@ -42,7 +42,6 @@ const baseConfig: RelayConfig = {
     projectQueueDepth: 10,
     dailyBudgetPerProject: 10,
     reactionRatePerHour: 20,
-    globalConcurrency: 5,
   },
   notifications: {
     scheduleFailures: true,
@@ -94,9 +93,24 @@ describe('parseCommand', () => {
     expect(result).toEqual({ command: 'bind', args: 'my-project' });
   });
 
-  it('recognizes bare "bind" as a command', () => {
+  it('returns null for bare "bind" (no prefix)', () => {
     const result = parseCommand('bind my-project');
-    expect(result).toEqual({ command: 'bind', args: 'my-project' });
+    expect(result).toBeNull();
+  });
+
+  it('returns null for "help me debug" (false positive)', () => {
+    const result = parseCommand('help me debug');
+    expect(result).toBeNull();
+  });
+
+  it('returns null for "cancel the subscription" (false positive)', () => {
+    const result = parseCommand('cancel the subscription');
+    expect(result).toBeNull();
+  });
+
+  it('returns null for "status update" (false positive)', () => {
+    const result = parseCommand('status update');
+    expect(result).toBeNull();
   });
 
   it('returns null for unknown commands', () => {
@@ -109,9 +123,9 @@ describe('parseCommand', () => {
     expect(result).toBeNull();
   });
 
-  it('recognizes help command', () => {
+  it('returns null for bare "help" (no prefix)', () => {
     const result = parseCommand('help');
-    expect(result).toEqual({ command: 'help', args: '' });
+    expect(result).toBeNull();
   });
 });
 

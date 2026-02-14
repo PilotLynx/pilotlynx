@@ -13,14 +13,14 @@ export interface ContextConfig {
  */
 export function isThreadStale(
   db: Database.Database,
-  _platform: ChatPlatform,
-  _channelId: string,
+  platform: ChatPlatform,
+  channelId: string,
   conversationId: string,
   staleDays: number,
 ): boolean {
   const row = db.prepare(
-    `SELECT MAX(timestamp) AS last_ts FROM messages WHERE conversation_id = ?`,
-  ).get(conversationId) as { last_ts: string | null } | undefined;
+    `SELECT MAX(timestamp) AS last_ts FROM messages WHERE conversation_id = ? AND platform = ? AND channel_id = ?`,
+  ).get(conversationId, platform.name, channelId) as { last_ts: string | null } | undefined;
 
   if (!row?.last_ts) return true;
 
@@ -80,9 +80,9 @@ export async function assembleContext(
               message_id AS messageId, user_id AS userId, user_name AS userName,
               content AS text, timestamp, is_bot AS isBot
        FROM messages
-       WHERE conversation_id = ?
+       WHERE conversation_id = ? AND platform = ? AND channel_id = ?
        ORDER BY timestamp ASC`,
-    ).all(conversationId) as Array<{
+    ).all(conversationId, platform.name, channelId) as Array<{
       platform: string;
       channelId: string;
       conversationId: string;
@@ -115,8 +115,8 @@ export async function assembleContext(
           cacheMessages(db, newer);
           history = history.concat(newer);
         }
-      } catch {
-        // Non-fatal: proceed with cached data
+      } catch (err) {
+        console.warn('[relay] Failed to fetch thread history:', err instanceof Error ? err.message : String(err));
       }
     }
   }

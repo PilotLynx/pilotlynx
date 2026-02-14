@@ -106,11 +106,10 @@ export class TelegramAdapter implements ChatPlatform {
     if (threadId) {
       opts.reply_to_message_id = parseInt(threadId, 10);
     }
-    const escaped = escapeMarkdownV2(text);
     const result = await this.bot.api.sendMessage(
       channelId,
-      escaped,
-      { ...opts, parse_mode: 'MarkdownV2' },
+      text,
+      opts,
     );
     return String(result.message_id);
   }
@@ -120,12 +119,10 @@ export class TelegramAdapter implements ChatPlatform {
     messageId: string,
     text: string,
   ): Promise<void> {
-    const escaped = escapeMarkdownV2(text);
     await this.bot.api.editMessageText(
       channelId,
       parseInt(messageId, 10),
-      escaped,
-      { parse_mode: 'MarkdownV2' },
+      text,
     );
   }
 
@@ -191,8 +188,8 @@ export class TelegramAdapter implements ChatPlatform {
       lastUpdate = now;
       try {
         await this.updateMessage(channelId, msgId, text);
-      } catch {
-        // Telegram rate limit or identical content – ignore
+      } catch (err) {
+        console.warn('[telegram] stream flush error:', err instanceof Error ? err.message : err);
       }
     };
 
@@ -286,8 +283,3 @@ export class TelegramAdapter implements ChatPlatform {
   }
 }
 
-// ── Telegram MarkdownV2 escaping ──
-
-function escapeMarkdownV2(text: string): string {
-  return text.replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, '\\$1');
-}

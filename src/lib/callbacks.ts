@@ -29,9 +29,8 @@ const SECRETS_PATTERNS = [
 /** Check if content appears to contain secrets/credentials. */
 export function containsPotentialSecrets(content: string): string | null {
   for (const pattern of SECRETS_PATTERNS) {
-    const match = content.match(pattern);
-    if (match) {
-      return `Potential secret detected: ${match[0].slice(0, 8)}...`;
+    if (pattern.test(content)) {
+      return 'Potential secret pattern detected in output.';
     }
   }
   return null;
