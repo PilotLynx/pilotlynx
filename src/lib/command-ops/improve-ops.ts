@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, cpSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, cpSync, readdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import chalk from 'chalk';
 import { listProjects } from '../project.js';
@@ -20,6 +20,7 @@ import { buildProjectEnv } from '../secrets.js';
 import { getRunAgentConfig } from '../../agents/run.agent.js';
 import { getProjectDir, INSIGHTS_DIR } from '../config.js';
 import { resetPolicyCache } from '../policy.js';
+import { loadImproveState, saveImproveState } from '../schedule.js';
 import type { RunRecord } from '../types.js';
 
 // ── Public Types ──
@@ -80,6 +81,20 @@ export async function executeImprove(options?: ImproveOptions): Promise<ImproveR
   if (projects.length === 0) {
     return { success: true, noProjects: true };
   }
+
+  // ── Phase 0: Auto-clean orphaned improve-backup dirs ──
+  for (const project of projects) {
+    const backupDir = join(getProjectDir(project), 'artifacts', BACKUP_DIR_NAME);
+    if (existsSync(backupDir)) {
+      try {
+        rmSync(backupDir, { recursive: true, force: true });
+      } catch {
+        // Non-fatal — skip if cleanup fails
+      }
+    }
+  }
+
+  const improveState = loadImproveState();
 
   // ── Phase 1: Build rich log summaries ──
   const logSummaries: Record<string, string> = {};
@@ -182,6 +197,13 @@ export async function executeImprove(options?: ImproveOptions): Promise<ImproveR
   for (const [project, feedback] of Object.entries(output.projectFeedback)) {
     if (!feedback || !feedback.summary) continue;
 
+    // Circuit breaker: skip projects with 3+ consecutive failures
+    const projectFailCount = improveState.projectFailures[project] ?? 0;
+    if (projectFailCount >= 3) {
+      console.log(chalk.yellow(`[pilotlynx] Skipping "${project}": ${projectFailCount} consecutive failures. Reset with a successful manual run.`));
+      continue;
+    }
+
     const workflowPath = join(getProjectDir(project), 'workflows', `${feedbackWorkflow}.ts`);
     if (!existsSync(workflowPath)) {
       console.log(chalk.dim(`[pilotlynx] Skipping "${project}": no ${feedbackWorkflow} workflow found.`));
@@ -211,19 +233,24 @@ export async function executeImprove(options?: ImproveOptions): Promise<ImproveR
       if (!feedbackResult.success) {
         failures.push({ project, error: feedbackResult.result });
         feedbackLogEntries.push({ date: new Date().toISOString(), project, actedOn: false, outcome: 'agent_failed' });
+        improveState.projectFailures[project] = projectFailCount + 1;
       } else {
         feedbackLogEntries.push({ date: new Date().toISOString(), project, actedOn: true, outcome: 'applied' });
+        improveState.projectFailures[project] = 0;
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       failures.push({ project, error: msg });
       feedbackLogEntries.push({ date: new Date().toISOString(), project, actedOn: false, outcome: msg });
+      improveState.projectFailures[project] = projectFailCount + 1;
     }
   }
 
   // ── Phase 6: Write feedback tracking and improve log ──
   writeFeedbackLog(feedbackLogEntries);
   writeImproveLog(output, failures, totalCost);
+  improveState.lastRun = new Date().toISOString();
+  saveImproveState(improveState);
 
   return {
     success: failures.length === 0,
@@ -305,19 +332,27 @@ function generateBootstrapFeedback(project: string): string | null {
   const briefPath = join(projectDir, 'PROJECT_BRIEF.md');
   const skillsDir = join(projectDir, '.claude', 'skills');
   const memoryPath = join(projectDir, 'memory', 'MEMORY.md');
+  const mcpPath = join(projectDir, '.mcp.json');
+  const runbookPath = join(projectDir, 'RUNBOOK.md');
+  const workflowsDir = join(projectDir, 'workflows');
 
   const hasDefaultBrief = existsSync(briefPath) && isTemplateDefault(briefPath);
   const hasNoSkills = !existsSync(skillsDir) || readdirSync(skillsDir).filter((f) => f.endsWith('.md')).length === 0;
   const hasDefaultMemory = existsSync(memoryPath) && isTemplateDefault(memoryPath);
+  const hasEmptyMcp = existsSync(mcpPath) && isEmptyMcpJson(mcpPath);
+  const hasIncompleteRunbook = existsSync(runbookPath) && readFileSync(runbookPath, 'utf8').length < 200;
+  const hasEmptyWorkflows = !existsSync(workflowsDir) || readdirSync(workflowsDir).filter((f) => f.endsWith('.ts')).length === 0;
 
-  if (!hasDefaultBrief && !hasNoSkills) return null;
+  if (!hasDefaultBrief && !hasNoSkills && !hasEmptyMcp && !hasIncompleteRunbook && !hasEmptyWorkflows) return null;
 
   const items: string[] = [];
   items.push('### Bootstrap (new project with no activity)');
   if (hasDefaultBrief) items.push('- PROJECT_BRIEF.md has template defaults — fill in project goals and key decisions');
   if (hasNoSkills) items.push('- No skills defined — create project-specific skills in .claude/skills/');
   if (hasDefaultMemory) items.push('- Memory is empty — record initial decisions and setup patterns');
-  items.push('- Define or customize workflows in workflows/ for project-specific tasks');
+  if (hasEmptyMcp) items.push('- .mcp.json is empty or has default template content — configure project-scoped MCP servers');
+  if (hasIncompleteRunbook) items.push('- RUNBOOK.md is incomplete (< 200 chars) — document operational procedures');
+  if (hasEmptyWorkflows) items.push('- No workflows defined — create workflow files in workflows/');
 
   return items.join('\n');
 }
@@ -326,6 +361,17 @@ function isTemplateDefault(filePath: string): boolean {
   try {
     const content = readFileSync(filePath, 'utf8');
     return content.includes('{{PROJECT_NAME}}') || content.includes('<!-- Record ') || content.length < 200;
+  } catch {
+    return false;
+  }
+}
+
+function isEmptyMcpJson(filePath: string): boolean {
+  try {
+    const content = readFileSync(filePath, 'utf8').trim();
+    if (content === '{}' || content === '{ }') return true;
+    const parsed = JSON.parse(content);
+    return Object.keys(parsed).length === 0;
   } catch {
     return false;
   }

@@ -1,86 +1,57 @@
 import { describe, it, expect } from 'vitest';
-import { RelayConfigSchema, ChatConfigSchema } from '../../../src/lib/relay/types.js';
+import { WebhookConfigSchema } from '../../../src/lib/relay/types.js';
 
-describe('RelayConfigSchema', () => {
+describe('WebhookConfigSchema', () => {
   it('parses a full config', () => {
     const raw = {
       version: 1,
       enabled: true,
-      channels: {
-        telegram: { enabled: true },
-        webhook: { enabled: false },
-      },
-      notifications: {
-        onScheduleComplete: true,
-        onScheduleFailure: true,
-      },
-      routing: {
-        defaultProject: 'my-project',
-        chats: {
-          'telegram:123': {
-            project: 'my-project',
-            allowRun: true,
-            allowChat: true,
-            notifySchedule: true,
-          },
+      webhooks: [
+        {
+          name: 'slack',
+          url: 'https://hooks.slack.com/test',
+          events: ['run_complete', 'run_failed'],
+          headers: { 'X-Custom': 'value' },
+          secret: 'my-secret',
         },
-        allowedUsers: ['456'],
-      },
+      ],
     };
-    const result = RelayConfigSchema.parse(raw);
+    const result = WebhookConfigSchema.parse(raw);
     expect(result.version).toBe(1);
-    expect(result.channels.telegram.enabled).toBe(true);
-    expect(result.routing.chats['telegram:123'].project).toBe('my-project');
-    expect(result.routing.allowedUsers).toEqual(['456']);
+    expect(result.enabled).toBe(true);
+    expect(result.webhooks).toHaveLength(1);
+    expect(result.webhooks[0].name).toBe('slack');
+    expect(result.webhooks[0].url).toBe('https://hooks.slack.com/test');
+    expect(result.webhooks[0].events).toEqual(['run_complete', 'run_failed']);
+    expect(result.webhooks[0].headers).toEqual({ 'X-Custom': 'value' });
+    expect(result.webhooks[0].secret).toBe('my-secret');
   });
 
   it('applies defaults for minimal config', () => {
-    const result = RelayConfigSchema.parse({ version: 1 });
-    expect(result.enabled).toBe(true);
-    expect(result.channels.telegram.enabled).toBe(false);
-    expect(result.channels.webhook.enabled).toBe(false);
-    expect(result.notifications.onScheduleComplete).toBe(true);
-    expect(result.routing.defaultProject).toBeNull();
-    expect(result.routing.chats).toEqual({});
-    expect(result.routing.allowedUsers).toEqual([]);
+    const result = WebhookConfigSchema.parse({});
+    expect(result.version).toBe(1);
+    expect(result.enabled).toBe(false);
+    expect(result.webhooks).toEqual([]);
   });
 
-  it('rejects missing version', () => {
-    expect(() => RelayConfigSchema.parse({})).toThrow();
-  });
-
-  it('rejects unknown top-level keys with strict mode', () => {
-    expect(() => RelayConfigSchema.parse({
+  it('applies default events for webhook entry', () => {
+    const result = WebhookConfigSchema.parse({
       version: 1,
-      unknownKey: 'bad',
+      enabled: true,
+      webhooks: [{ name: 'test', url: 'https://example.com/hook' }],
+    });
+    expect(result.webhooks[0].events).toEqual(['run_complete', 'run_failed']);
+  });
+
+  it('rejects invalid URL', () => {
+    expect(() => WebhookConfigSchema.parse({
+      webhooks: [{ name: 'bad', url: 'not-a-url' }],
     })).toThrow();
   });
-});
 
-describe('ChatConfigSchema', () => {
-  it('applies defaults', () => {
-    const result = ChatConfigSchema.parse({});
-    expect(result.allowRun).toBe(true);
-    expect(result.allowChat).toBe(true);
-    expect(result.notifySchedule).toBe(true);
-    expect(result.project).toBeUndefined();
-  });
-
-  it('parses full chat config', () => {
-    const result = ChatConfigSchema.parse({
-      project: 'test',
-      allowRun: false,
-      allowChat: false,
-      notifySchedule: false,
-    });
-    expect(result.project).toBe('test');
-    expect(result.allowRun).toBe(false);
-  });
-
-  it('rejects unknown keys with strict mode', () => {
-    expect(() => ChatConfigSchema.parse({
-      project: 'test',
-      unknownKey: 'bad',
+  it('rejects invalid event names', () => {
+    expect(() => WebhookConfigSchema.parse({
+      webhooks: [{ name: 'bad', url: 'https://example.com/hook', events: ['invalid_event'] }],
     })).toThrow();
   });
 });

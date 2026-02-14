@@ -1,0 +1,16 @@
+[
+  {
+    "name": "project_review_runs",
+    "workflow": "project_review",
+    "input": "Review the project structure and report any issues",
+    "expectedBehavior": "Reviews project files, identifies structure issues, provides actionable recommendations",
+    "tags": ["smoke", "review"]
+  },
+  {
+    "name": "daily_feedback_produces_output",
+    "workflow": "daily_feedback",
+    "input": "Provide feedback based on recent activity",
+    "expectedBehavior": "Analyzes logs, generates feedback, writes to memory or skills",
+    "tags": ["smoke", "feedback"]
+  }
+]

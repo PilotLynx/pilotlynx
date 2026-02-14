@@ -1,7 +1,7 @@
 import type { CanUseToolResult } from './types.js';
 import { resolve, basename } from 'node:path';
 import { bashCommandEscapesDir } from './bash-security.js';
-import { detectSandbox, wrapInSandbox } from './sandbox.js';
+import { wrapInSandbox } from './sandbox.js';
 
 // Files that feedback agents must never write to
 const FEEDBACK_DENIED_FILES = [
@@ -10,23 +10,57 @@ const FEEDBACK_DENIED_FILES = [
   '.claude/settings.local.json',
 ];
 
+// Patterns that indicate potential secrets in file content
+const SECRETS_PATTERNS = [
+  /(?:sk|pk|api|key|token|secret|password|auth)[-_]?[a-zA-Z0-9]{20,}/i,
+  /AIza[0-9A-Za-z_-]{35}/,                       // Google API key
+  /ghp_[0-9a-zA-Z]{36}/,                          // GitHub PAT
+  /(?:AKIA|ASIA)[0-9A-Z]{16}/,                    // AWS access key
+  /xox[bporas]-[0-9a-zA-Z-]{10,}/,                // Slack token
+  /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/,      // Private key PEM
+];
+
+/** Check if content appears to contain secrets/credentials. */
+export function containsPotentialSecrets(content: string): string | null {
+  for (const pattern of SECRETS_PATTERNS) {
+    const match = content.match(pattern);
+    if (match) {
+      return `Potential secret detected: ${match[0].slice(0, 8)}...`;
+    }
+  }
+  return null;
+}
+
+/** Returns a function that checks whether a path is inside resolvedDir or any of the additionalDirs. */
+function createPathChecker(resolvedDir: string, additionalDirs: string[]): (filePath: string) => boolean {
+  const prefix = resolvedDir + '/';
+  return (filePath: string): boolean => {
+    const resolved = resolve(filePath);
+    if (resolved === resolvedDir || resolved.startsWith(prefix)) return true;
+    for (const dir of additionalDirs) {
+      const dirPrefix = dir + '/';
+      if (resolved === dir || resolved.startsWith(dirPrefix)) return true;
+    }
+    return false;
+  };
+}
+
+/** Returns a function that checks whether a path matches any of the denied relative file paths. */
+function createDeniedPathChecker(projectDir: string, deniedFiles: string[]): (filePath: string) => boolean {
+  const deniedPaths = deniedFiles.map((f) => resolve(projectDir, f));
+  return (filePath: string): boolean => {
+    const resolved = resolve(filePath);
+    return deniedPaths.some((denied) => resolved === denied);
+  };
+}
+
 export function pathEnforcementCallback(
   projectDir: string,
   additionalDirs: string[] = [],
 ): (toolName: string, input: unknown) => Promise<CanUseToolResult> {
   const resolvedProjectDir = resolve(projectDir);
-  const prefix = resolvedProjectDir + '/';
   const resolvedAdditionalDirs = additionalDirs.map(d => resolve(d));
-
-  function isAllowedPath(filePath: string): boolean {
-    const resolved = resolve(filePath);
-    if (resolved === resolvedProjectDir || resolved.startsWith(prefix)) return true;
-    for (const dir of resolvedAdditionalDirs) {
-      const dirPrefix = dir + '/';
-      if (resolved === dir || resolved.startsWith(dirPrefix)) return true;
-    }
-    return false;
-  }
+  const isAllowedPath = createPathChecker(resolvedProjectDir, resolvedAdditionalDirs);
 
   return async (toolName: string, input: unknown): Promise<CanUseToolResult> => {
     // Enforce Read/Write/Edit to project directory + additional directories
@@ -34,6 +68,17 @@ export function pathEnforcementCallback(
       const filePath = (input as Record<string, unknown>)?.file_path as string | undefined;
       if (filePath && !isAllowedPath(filePath)) {
         return { behavior: 'deny', message: `File access restricted to project directory: ${resolvedProjectDir}` };
+      }
+    }
+
+    // Output guardrails: check Write/Edit content for secrets
+    if (['Write', 'Edit'].includes(toolName)) {
+      const content = (input as Record<string, unknown>)?.content as string
+        ?? (input as Record<string, unknown>)?.new_string as string
+        ?? '';
+      const leak = containsPotentialSecrets(content);
+      if (leak) {
+        return { behavior: 'deny', message: `Output guardrail: ${leak}. Do not write secrets to files.` };
       }
     }
 
@@ -68,29 +113,12 @@ export function feedbackPathEnforcementCallback(
   additionalDirs: string[] = [],
 ): (toolName: string, input: unknown) => Promise<CanUseToolResult> {
   const resolvedProjectDir = resolve(projectDir);
-  const prefix = resolvedProjectDir + '/';
   const resolvedAdditionalDirs = additionalDirs.map(d => resolve(d));
-
-  // Pre-compute denied paths
-  const deniedPaths = FEEDBACK_DENIED_FILES.map((f) => resolve(projectDir, f));
-
-  function isAllowedPath(filePath: string): boolean {
-    const resolved = resolve(filePath);
-    if (resolved === resolvedProjectDir || resolved.startsWith(prefix)) return true;
-    for (const dir of resolvedAdditionalDirs) {
-      const dirPrefix = dir + '/';
-      if (resolved === dir || resolved.startsWith(dirPrefix)) return true;
-    }
-    return false;
-  }
-
-  function isDeniedForWrite(filePath: string): boolean {
-    const resolved = resolve(filePath);
-    return deniedPaths.some((denied) => resolved === denied);
-  }
+  const isAllowedPath = createPathChecker(resolvedProjectDir, resolvedAdditionalDirs);
+  const isDeniedForWrite = createDeniedPathChecker(projectDir, FEEDBACK_DENIED_FILES);
 
   return async (toolName: string, input: unknown): Promise<CanUseToolResult> => {
-    // For Write/Edit: check deny list first, then allowed path
+    // For Write/Edit: check deny list first, then allowed path, then secrets
     if (['Write', 'Edit'].includes(toolName)) {
       const filePath = (input as Record<string, unknown>)?.file_path as string | undefined;
       if (filePath) {
@@ -100,6 +128,14 @@ export function feedbackPathEnforcementCallback(
         if (!isAllowedPath(filePath)) {
           return { behavior: 'deny', message: `File access restricted to project directory: ${resolvedProjectDir}` };
         }
+      }
+      // Output guardrails: check content for secrets
+      const content = (input as Record<string, unknown>)?.content as string
+        ?? (input as Record<string, unknown>)?.new_string as string
+        ?? '';
+      const leak = containsPotentialSecrets(content);
+      if (leak) {
+        return { behavior: 'deny', message: `Output guardrail: ${leak}. Do not write secrets to files.` };
       }
     }
 
@@ -142,20 +178,13 @@ export function projectSetupCallback(
   policiesDir: string,
 ): (toolName: string, input: unknown) => Promise<CanUseToolResult> {
   const resolvedProject = resolve(projectDir);
-  const resolvedPolicies = resolve(policiesDir);
-  const projectPrefix = resolvedProject + '/';
-  const policiesPrefix = resolvedPolicies + '/';
+  const isAllowedPath = createPathChecker(resolvedProject, [resolve(policiesDir)]);
 
   return async (toolName: string, input: unknown): Promise<CanUseToolResult> => {
     if (['Write', 'Edit'].includes(toolName)) {
       const filePath = (input as Record<string, unknown>)?.file_path as string | undefined;
-      if (filePath) {
-        const resolved = resolve(filePath);
-        const inProject = resolved === resolvedProject || resolved.startsWith(projectPrefix);
-        const inPolicies = resolved === resolvedPolicies || resolved.startsWith(policiesPrefix);
-        if (!inProject && !inPolicies) {
-          return { behavior: 'deny', message: `Write restricted to project and policies directories` };
-        }
+      if (filePath && !isAllowedPath(filePath)) {
+        return { behavior: 'deny', message: `Write restricted to project and policies directories` };
       }
     }
 

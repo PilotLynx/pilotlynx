@@ -8,6 +8,7 @@ export const WorkspaceConfigSchema = z.object({
   autoImprove: z.object({
     enabled: z.boolean().default(true),
   }).default({ enabled: true }),
+  logRetentionDays: z.number().min(1).max(3650).default(90),
 });
 
 export type WorkspaceConfig = z.infer<typeof WorkspaceConfigSchema>;
@@ -76,6 +77,8 @@ export const ScheduleEntrySchema = z.object({
   timezone: z.string().default('UTC'),
   catchUpPolicy: z.enum(['run_all', 'run_latest', 'skip']).default('run_latest'),
   maxLookbackDays: z.number().min(1).max(365).default(7),
+  model: z.string().optional(),
+  maxBudgetUsd: z.number().positive().optional(),
 });
 
 export const ScheduleConfigSchema = z.object({
@@ -174,6 +177,7 @@ export interface AgentResult {
   cacheReadTokens?: number;
   cacheCreationTokens?: number;
   model?: string;
+  spans?: TraceSpan[];
 }
 
 // ── Verification ──
@@ -183,3 +187,97 @@ export interface VerificationResult {
   errors: string[];
   warnings: string[];
 }
+
+// ── Run Tracing ──
+
+export interface TraceSpan {
+  type: 'assistant' | 'tool_use' | 'tool_result' | 'result' | 'error';
+  timestamp: string;
+  durationMs?: number;
+  toolName?: string;
+  tokens?: { input?: number; output?: number };
+  costUsd?: number;
+  message?: string;
+}
+
+export interface RunTrace {
+  runId: string;
+  project: string;
+  workflow: string;
+  startedAt: string;
+  spans: TraceSpan[];
+}
+
+// ── Audit Trail ──
+
+export interface AuditEntry {
+  timestamp: string;
+  project: string;
+  workflow: string;
+  triggeredBy: 'cli' | 'schedule' | 'improve';
+  runId: string;
+  success: boolean;
+  costUsd: number;
+  durationMs: number;
+  toolInvocations: string[];
+  model?: string;
+}
+
+// ── Evaluation Framework ──
+
+export interface EvalTestCase {
+  name: string;
+  workflow: string;
+  input: string;
+  expectedBehavior: string;
+  tags?: string[];
+}
+
+export interface EvalResult {
+  testCase: string;
+  workflow: string;
+  passed: boolean;
+  score: number;
+  reasoning: string;
+  costUsd: number;
+  timestamp: string;
+}
+
+export interface EvalSummary {
+  project: string;
+  timestamp: string;
+  totalCases: number;
+  passed: number;
+  failed: number;
+  avgScore: number;
+  results: EvalResult[];
+}
+
+// ── Episodic Memory ──
+
+export interface EpisodicMemoryEntry {
+  date: string;
+  workflow: string;
+  result: 'success' | 'failure';
+  cost: number;
+  keyDecisions: string[];
+  tags: string[];
+}
+
+// ── Health Score ──
+
+export interface HealthScore {
+  score: number;
+  trend: 'improving' | 'stable' | 'declining';
+  successRate7d: number;
+  successRate30d: number;
+  avgCost7d: number;
+  avgCost30d: number;
+}
+
+// ── Improve State (extended) ──
+
+export const ImproveStateSchema = z.object({
+  lastRun: z.string().nullable().default(null),
+  projectFailures: z.record(z.string(), z.number()).default({}),
+});

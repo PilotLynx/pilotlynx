@@ -63,6 +63,12 @@ export function makeScheduleCommand(): Command {
             const startedAt = new Date().toISOString();
             const projectEnv = buildProjectEnv(project);
             const config = getRunAgentConfig(project, workflow, projectEnv);
+
+            // Apply per-workflow model and budget from schedule.yaml
+            const schedEntry = scheduleConfig.schedules.find(s => s.workflow === workflow);
+            if (schedEntry?.model) config.model = schedEntry.model;
+            if (schedEntry?.maxBudgetUsd) config.maxBudgetUsd = schedEntry.maxBudgetUsd;
+
             const result = await runAgent(config);
             const completedAt = new Date().toISOString();
 
@@ -98,7 +104,7 @@ export function makeScheduleCommand(): Command {
           if (hoursSince >= 24) {
             console.log(chalk.blue('\nRunning auto-improve...'));
             const improveResult = await executeImprove();
-            saveImproveState(now.toISOString());
+            saveImproveState({ ...improveState, lastRun: now.toISOString() });
             if (improveResult.success) {
               console.log(chalk.green('Auto-improve completed.'));
             } else {

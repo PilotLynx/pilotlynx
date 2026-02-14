@@ -1,190 +1,129 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { getConfigRoot } from '../lib/config.js';
-import { loadRelayConfig, getTelegramToken } from '../lib/relay/config.js';
-import { createTelegramAdapter } from '../lib/relay/channel.js';
-import { createRouter } from '../lib/relay/router.js';
-import { installService, uninstallService, getServiceStatus } from '../lib/relay/service.js';
+import { loadWebhookConfig } from '../lib/relay/config.js';
+import { sendWebhookNotification } from '../lib/relay/notify.js';
+import type { WebhookPayload } from '../lib/relay/types.js';
 
 export function makeRelayCommand(): Command {
-  const cmd = new Command('relay').description('Manage the Telegram/webhook relay');
-
-  cmd
-    .command('start')
-    .description('Start the relay bot (long-running process)')
-    .action(async () => {
-      const config = loadRelayConfig();
-      if (!config) {
-        console.error(chalk.red('No relay.yaml found. Create one in your pilotlynx/ directory.'));
-        console.log(chalk.dim('See: pilotlynx relay --help'));
-        process.exit(1);
-      }
-
-      if (!config.enabled) {
-        console.error(chalk.yellow('Relay is disabled in relay.yaml (enabled: false).'));
-        process.exit(1);
-      }
-
-      if (!config.channels.telegram.enabled) {
-        console.error(chalk.yellow('No channels enabled. Enable telegram in relay.yaml.'));
-        process.exit(1);
-      }
-
-      const token = getTelegramToken();
-      if (!token) {
-        console.error(chalk.red('TELEGRAM_BOT_TOKEN not found in .env'));
-        process.exit(1);
-      }
-
-      console.log(chalk.blue('Starting PilotLynx Relay...'));
-
-      const adapter = createTelegramAdapter();
-      const router = createRouter(adapter);
-
-      // Handle graceful shutdown
-      const shutdown = async () => {
-        console.log(chalk.dim('\nShutting down relay...'));
-        try {
-          await adapter.stop();
-        } catch (err) {
-          console.error('Error during shutdown:', err);
-        }
-        process.exit(0);
-      };
-      process.on('SIGINT', shutdown);
-      process.on('SIGTERM', shutdown);
-
-      await adapter.start(router);
-
-      const chatCount = Object.keys(config.routing.chats).length;
-      console.log(chalk.green('Relay is running.'));
-      console.log(chalk.dim(`  Channels: Telegram`));
-      console.log(chalk.dim(`  Mapped chats: ${chatCount}`));
-      console.log(chalk.dim(`  Press Ctrl+C to stop\n`));
-    });
+  const cmd = new Command('relay').description('Manage webhook notifications');
 
   cmd
     .command('status')
-    .description('Show relay configuration and service status')
+    .description('Show configured webhooks')
     .action(async () => {
-      const config = loadRelayConfig();
+      const config = loadWebhookConfig();
       if (!config) {
-        console.log(chalk.dim('No relay.yaml found. Relay is not configured.'));
+        console.log(chalk.dim('No webhook.yaml found. Webhooks are not configured.'));
+        console.log(chalk.dim('Run `pilotlynx relay add <name> --url <url>` to add one.'));
         return;
       }
 
-      console.log(chalk.blue('Relay Status\n'));
+      console.log(chalk.blue('Webhook Status\n'));
       console.log(chalk.bold('Enabled: ') + (config.enabled ? chalk.green('yes') : chalk.red('no')));
-      console.log(chalk.bold('Telegram: ') + (config.channels.telegram.enabled ? chalk.green('enabled') : chalk.dim('disabled')));
-      console.log(chalk.bold('Webhook: ') + (config.channels.webhook.enabled ? chalk.green('enabled') : chalk.dim('disabled')));
+      console.log(chalk.bold(`Webhooks: ${config.webhooks.length}\n`));
 
-      const token = getTelegramToken();
-      console.log(chalk.bold('Bot token: ') + (token ? chalk.green('configured') : chalk.red('missing')));
-
-      console.log(chalk.bold('\nNotifications:'));
-      console.log(`  On success: ${config.notifications.onScheduleComplete ? 'yes' : 'no'}`);
-      console.log(`  On failure: ${config.notifications.onScheduleFailure ? 'yes' : 'no'}`);
-
-      const chats = Object.entries(config.routing.chats);
-      console.log(chalk.bold(`\nMapped chats: ${chats.length}`));
-      for (const [chatId, chatConfig] of chats) {
-        const project = chatConfig.project ?? '(any)';
-        const flags = [
-          chatConfig.allowRun ? 'run' : null,
-          chatConfig.allowChat ? 'chat' : null,
-          chatConfig.notifySchedule ? 'notify' : null,
-        ].filter(Boolean).join(', ');
-        console.log(`  ${chatId} → ${project} [${flags}]`);
-      }
-
-      // Service status
-      const service = getServiceStatus();
-      console.log(chalk.bold('\nService:'));
-      console.log(`  Platform: ${service.platform}`);
-      console.log(`  Installed: ${service.installed ? chalk.green('yes') : chalk.dim('no')}`);
-      console.log(`  Running: ${service.running ? chalk.green('yes') : chalk.dim('no')}`);
-    });
-
-  cmd
-    .command('install')
-    .description('Install relay as a system service')
-    .action(async () => {
-      try {
-        const config = loadRelayConfig();
-        if (!config) {
-          console.error(chalk.red('No relay.yaml found. Configure relay first.'));
-          process.exit(1);
+      for (const wh of config.webhooks) {
+        console.log(chalk.bold(`  ${wh.name}`));
+        console.log(`    URL: ${wh.url}`);
+        console.log(`    Events: ${wh.events.join(', ')}`);
+        console.log(`    Secret: ${wh.secret ? 'configured' : 'none'}`);
+        if (wh.headers && Object.keys(wh.headers).length > 0) {
+          console.log(`    Headers: ${Object.keys(wh.headers).join(', ')}`);
         }
-        installService();
-        console.log(chalk.green('Relay service installed and started.'));
-        console.log(chalk.dim('Use `pilotlynx relay status` to check.'));
-      } catch (err) {
-        console.error(chalk.red(err instanceof Error ? err.message : String(err)));
-        process.exit(1);
+        console.log('');
       }
     });
 
   cmd
-    .command('uninstall')
-    .description('Remove relay system service')
+    .command('test')
+    .description('Send a test payload to all configured webhooks')
     .action(async () => {
-      try {
-        uninstallService();
-        console.log(chalk.green('Relay service removed.'));
-      } catch (err) {
-        console.error(chalk.red(err instanceof Error ? err.message : String(err)));
-        process.exit(1);
+      const config = loadWebhookConfig();
+      if (!config?.enabled || config.webhooks.length === 0) {
+        console.log(chalk.yellow('No enabled webhooks to test.'));
+        return;
       }
+
+      const payload: WebhookPayload = {
+        event: 'run_complete',
+        timestamp: new Date().toISOString(),
+        project: 'test-project',
+        workflow: 'test-workflow',
+        success: true,
+        summary: 'This is a test webhook payload from PilotLynx.',
+        costUsd: 0,
+        durationMs: 0,
+      };
+
+      console.log(chalk.blue('Sending test payload...'));
+      await sendWebhookNotification(payload);
+      console.log(chalk.green('Test payload sent to all matching webhooks.'));
     });
 
   cmd
-    .command('add-chat')
-    .description('Map a Telegram chat ID to a project')
-    .argument('<chatId>', 'Telegram chat ID (numeric)')
-    .requiredOption('--project <name>', 'project name to map')
-    .option('--no-run', 'disable /run commands')
-    .option('--no-chat', 'disable free-form chat')
-    .option('--no-notify', 'disable schedule notifications')
-    .action(async (chatId: string, opts: { project: string; run: boolean; chat: boolean; notify: boolean }) => {
-      const configPath = join(getConfigRoot(), 'relay.yaml');
+    .command('add')
+    .description('Add a webhook to configuration')
+    .argument('<name>', 'webhook name')
+    .requiredOption('--url <url>', 'webhook URL (must be HTTPS)')
+    .option('--secret <secret>', 'HMAC signing secret')
+    .option('--events <events>', 'comma-separated event list', 'run_complete,run_failed')
+    .action(async (name: string, opts: { url: string; secret?: string; events: string }) => {
+      const configPath = join(getConfigRoot(), 'webhook.yaml');
 
-      // Create relay.yaml if it doesn't exist
       let raw: Record<string, unknown>;
       if (existsSync(configPath)) {
         raw = parseYaml(readFileSync(configPath, 'utf8')) as Record<string, unknown>;
       } else {
-        raw = {
-          version: 1,
-          enabled: true,
-          channels: { telegram: { enabled: true }, webhook: { enabled: false } },
-          notifications: { onScheduleComplete: true, onScheduleFailure: true },
-          routing: { defaultProject: null, chats: {}, allowedUsers: [] },
-        };
+        raw = { version: 1, enabled: true, webhooks: [] };
       }
 
-      // Ensure routing.chats exists
-      const routing = (raw.routing ?? {}) as Record<string, unknown>;
-      const chats = (routing.chats ?? {}) as Record<string, unknown>;
+      const webhooks = (raw.webhooks ?? []) as Array<Record<string, unknown>>;
 
-      const key = `telegram:${chatId}`;
-      chats[key] = {
-        project: opts.project,
-        allowRun: opts.run,
-        allowChat: opts.chat,
-        notifySchedule: opts.notify,
-      };
+      // Check for duplicate name
+      if (webhooks.some(w => w.name === name)) {
+        console.error(chalk.red(`Webhook "${name}" already exists. Remove it first.`));
+        process.exit(1);
+      }
 
-      routing.chats = chats;
-      raw.routing = routing;
+      const events = opts.events.split(',').map(e => e.trim());
+      const entry: Record<string, unknown> = { name, url: opts.url, events };
+      if (opts.secret) entry.secret = opts.secret;
 
-      const tmpPath = configPath + '.tmp';
-      writeFileSync(tmpPath, stringifyYaml(raw), 'utf8');
-      renameSync(tmpPath, configPath);
-      console.log(chalk.green(`Mapped chat ${chatId} → project "${opts.project}"`));
+      webhooks.push(entry);
+      raw.webhooks = webhooks;
+
+      writeFileSync(configPath, stringifyYaml(raw), 'utf8');
+      console.log(chalk.green(`Added webhook "${name}" -> ${opts.url}`));
       console.log(chalk.dim(`Config written to ${configPath}`));
+    });
+
+  cmd
+    .command('remove')
+    .description('Remove a webhook from configuration')
+    .argument('<name>', 'webhook name to remove')
+    .action(async (name: string) => {
+      const configPath = join(getConfigRoot(), 'webhook.yaml');
+      if (!existsSync(configPath)) {
+        console.error(chalk.red('No webhook.yaml found.'));
+        process.exit(1);
+      }
+
+      const raw = parseYaml(readFileSync(configPath, 'utf8')) as Record<string, unknown>;
+      const webhooks = (raw.webhooks ?? []) as Array<Record<string, unknown>>;
+      const filtered = webhooks.filter(w => w.name !== name);
+
+      if (filtered.length === webhooks.length) {
+        console.error(chalk.red(`Webhook "${name}" not found.`));
+        process.exit(1);
+      }
+
+      raw.webhooks = filtered;
+      writeFileSync(configPath, stringifyYaml(raw), 'utf8');
+      console.log(chalk.green(`Removed webhook "${name}".`));
     });
 
   return cmd;

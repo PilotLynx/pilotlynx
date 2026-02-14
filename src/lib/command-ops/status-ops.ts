@@ -1,10 +1,10 @@
 import { execFileSync } from 'node:child_process';
 import { listProjects } from '../project.js';
-import { getRecentLogs } from '../observation.js';
+import { getRecentLogs, getHealthScore } from '../observation.js';
 import { getRegisteredProjects } from '../registry.js';
 import { loadScheduleConfig, loadImproveState } from '../schedule.js';
 import { loadWorkspaceConfig, getConfigRoot } from '../config.js';
-import { loadRelayConfig } from '../relay/config.js';
+import { loadWebhookConfig } from '../relay/config.js';
 import { Cron } from 'croner';
 
 export interface ProjectStatus {
@@ -14,6 +14,7 @@ export interface ProjectStatus {
   lastStatus: 'OK' | 'FAIL' | null;
   cost7d: number;
   nextScheduled: string | null;
+  health: 'good' | 'warning' | 'critical' | null;
 }
 
 export interface StatusResult {
@@ -65,6 +66,15 @@ export function getWorkspaceStatus(): StatusResult {
       // Skip projects with invalid schedule configs
     }
 
+    // Health score: require >= 3 runs in 7 days for meaningful data
+    let health: 'good' | 'warning' | 'critical' | null = null;
+    if (logs.length >= 3) {
+      const hs = getHealthScore(name);
+      if (hs.score >= 60) health = 'good';
+      else if (hs.score >= 30) health = 'warning';
+      else health = 'critical';
+    }
+
     projects.push({
       name,
       path: entry?.path ?? name,
@@ -72,6 +82,7 @@ export function getWorkspaceStatus(): StatusResult {
       lastStatus: lastLog ? (lastLog.success ? 'OK' : 'FAIL') : null,
       cost7d,
       nextScheduled,
+      health,
     });
   }
 
@@ -87,13 +98,13 @@ export function getWorkspaceStatus(): StatusResult {
     // No crontab or command not available
   }
 
-  // Relay config
+  // Webhook config
   let relayConfigured = false;
   try {
-    const relayConfig = loadRelayConfig();
-    relayConfigured = relayConfig?.enabled ?? false;
+    const webhookConfig = loadWebhookConfig();
+    relayConfigured = webhookConfig?.enabled ?? false;
   } catch {
-    // Relay not configured
+    // Webhooks not configured
   }
 
   // Workspace config

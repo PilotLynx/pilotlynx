@@ -115,7 +115,7 @@ describe('observation statistics and patterns', () => {
         applicableTo: ['api-integration'],
         confidence: 'high',
         createdAt: '2025-01-15T00:00:00Z',
-        expiresAt: '2025-04-15T00:00:00Z',
+        expiresAt: '2099-04-15T00:00:00Z',
       });
 
       const patterns = readSharedPatterns();

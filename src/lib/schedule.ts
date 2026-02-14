@@ -2,8 +2,9 @@ import { readFileSync, writeFileSync, existsSync, renameSync, mkdirSync } from '
 import { join, dirname } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { Cron } from 'croner';
+import { z } from 'zod';
 import { getProjectDir, getConfigRoot } from './config.js';
-import { ScheduleConfigSchema, ScheduleStateSchema } from './types.js';
+import { ScheduleConfigSchema, ScheduleStateSchema, ImproveStateSchema } from './types.js';
 import type { ScheduleConfig, ScheduleState, ScheduleEntry } from './types.js';
 
 export function loadScheduleConfig(project: string): ScheduleConfig | null {
@@ -33,25 +34,20 @@ export function saveScheduleState(project: string, state: ScheduleState): void {
   renameSync(tmpPath, filePath);
 }
 
-export interface ImproveState {
-  lastRun: string | null;
-}
-
-export function loadImproveState(): ImproveState {
+export function loadImproveState(): z.infer<typeof ImproveStateSchema> {
   const filePath = join(getConfigRoot(), 'improve-state.json');
-  if (!existsSync(filePath)) return { lastRun: null };
+  if (!existsSync(filePath)) return ImproveStateSchema.parse({});
   try {
-    const raw = JSON.parse(readFileSync(filePath, 'utf8'));
-    return { lastRun: raw.lastRun ?? null };
+    return ImproveStateSchema.parse(JSON.parse(readFileSync(filePath, 'utf8')));
   } catch {
-    return { lastRun: null };
+    return ImproveStateSchema.parse({});
   }
 }
 
-export function saveImproveState(lastRun: string): void {
+export function saveImproveState(state: z.infer<typeof ImproveStateSchema>): void {
   const filePath = join(getConfigRoot(), 'improve-state.json');
   const tmpPath = `${filePath}.tmp`;
-  writeFileSync(tmpPath, JSON.stringify({ lastRun }, null, 2), 'utf8');
+  writeFileSync(tmpPath, JSON.stringify(state, null, 2), 'utf8');
   renameSync(tmpPath, filePath);
 }
 

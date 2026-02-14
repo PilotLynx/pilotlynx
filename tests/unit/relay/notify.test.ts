@@ -1,44 +1,35 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdirSync, writeFileSync, rmSync, mkdtempSync, readFileSync, existsSync } from 'node:fs';
+import { mkdirSync, writeFileSync, rmSync, mkdtempSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { stringify as stringifyYaml } from 'yaml';
 import { resetConfigCache, CONFIG_DIR_NAME } from '../../../src/lib/config.js';
-import { resetRelayConfigCache } from '../../../src/lib/relay/config.js';
-
-// Mock grammy's Api before importing notify
-vi.mock('grammy', () => ({
-  Api: vi.fn().mockImplementation(() => ({
-    sendMessage: vi.fn().mockResolvedValue({}),
-  })),
-}));
-
-import { sendRunNotification } from '../../../src/lib/relay/notify.js';
-import { Api } from 'grammy';
+import { sendRunNotification, sendWebhookNotification } from '../../../src/lib/relay/notify.js';
 import type { RunRecord } from '../../../src/lib/types.js';
+import type { WebhookPayload } from '../../../src/lib/relay/types.js';
 
 describe('sendRunNotification', () => {
   let tmpDir: string;
   let configDir: string;
   const origEnv = process.env.PILOTLYNX_ROOT;
+  let originalFetch: typeof globalThis.fetch;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-relay-notify-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-webhook-notify-'));
     configDir = join(tmpDir, CONFIG_DIR_NAME);
     mkdirSync(configDir, { recursive: true });
     writeFileSync(join(configDir, 'pilotlynx.yaml'), stringifyYaml({ version: 1, name: 'test' }));
-    writeFileSync(join(configDir, '.env'), 'TELEGRAM_BOT_TOKEN=test-token-123\n');
     process.env.PILOTLYNX_ROOT = configDir;
     resetConfigCache();
-    resetRelayConfigCache();
-    vi.clearAllMocks();
+    originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200 });
   });
 
   afterEach(() => {
     process.env.PILOTLYNX_ROOT = origEnv;
     rmSync(tmpDir, { recursive: true, force: true });
     resetConfigCache();
-    resetRelayConfigCache();
+    globalThis.fetch = originalFetch;
   });
 
   const sampleRecord: RunRecord = {
@@ -52,153 +43,183 @@ describe('sendRunNotification', () => {
     numTurns: 5,
   };
 
-  it('does nothing when relay.yaml does not exist', async () => {
+  it('does nothing when webhook.yaml does not exist', async () => {
     await sendRunNotification(sampleRecord);
-    expect(Api).not.toHaveBeenCalled();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
-  it('does nothing when relay is disabled', async () => {
+  it('does nothing when webhooks are disabled', async () => {
     writeFileSync(
-      join(configDir, 'relay.yaml'),
-      stringifyYaml({ version: 1, enabled: false }),
+      join(configDir, 'webhook.yaml'),
+      stringifyYaml({ version: 1, enabled: false, webhooks: [] }),
     );
-    resetRelayConfigCache();
     await sendRunNotification(sampleRecord);
-    expect(Api).not.toHaveBeenCalled();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
-  it('sends to Telegram chats configured for the project', async () => {
+  it('sends to webhooks that match the event', async () => {
     writeFileSync(
-      join(configDir, 'relay.yaml'),
+      join(configDir, 'webhook.yaml'),
       stringifyYaml({
         version: 1,
         enabled: true,
-        channels: { telegram: { enabled: true } },
-        routing: {
-          chats: {
-            'telegram:12345': {
-              project: 'my-project',
-              notifySchedule: true,
-            },
-          },
-        },
+        webhooks: [
+          { name: 'slack', url: 'https://hooks.slack.com/test', events: ['run_complete'] },
+        ],
       }),
     );
-    resetRelayConfigCache();
 
     await sendRunNotification(sampleRecord);
 
-    expect(Api).toHaveBeenCalledWith('test-token-123');
-    const mockApi = vi.mocked(Api).mock.results[0].value;
-    expect(mockApi.sendMessage).toHaveBeenCalledWith(
-      '12345',
-      expect.stringContaining('my-project/daily_check'),
-      expect.any(Object),
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      'https://hooks.slack.com/test',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('my-project'),
+      }),
     );
   });
 
-  it('skips chats not configured for this project', async () => {
+  it('skips webhooks that do not match the event', async () => {
     writeFileSync(
-      join(configDir, 'relay.yaml'),
+      join(configDir, 'webhook.yaml'),
       stringifyYaml({
         version: 1,
         enabled: true,
-        channels: { telegram: { enabled: true } },
-        routing: {
-          chats: {
-            'telegram:12345': {
-              project: 'other-project',
-              notifySchedule: true,
-            },
-          },
-        },
+        webhooks: [
+          { name: 'slack', url: 'https://hooks.slack.com/test', events: ['improve_complete'] },
+        ],
       }),
     );
-    resetRelayConfigCache();
 
     await sendRunNotification(sampleRecord);
-    // Api may be created but sendMessage should not be called
-    if (vi.mocked(Api).mock.results.length > 0) {
-      expect(vi.mocked(Api).mock.results[0].value.sendMessage).not.toHaveBeenCalled();
-    }
+    expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
-  it('skips chats with notifySchedule: false', async () => {
+  it('sends run_failed event for failed records', async () => {
     writeFileSync(
-      join(configDir, 'relay.yaml'),
+      join(configDir, 'webhook.yaml'),
       stringifyYaml({
         version: 1,
         enabled: true,
-        channels: { telegram: { enabled: true } },
-        routing: {
-          chats: {
-            'telegram:12345': {
-              project: 'my-project',
-              notifySchedule: false,
-            },
-          },
-        },
+        webhooks: [
+          { name: 'alerts', url: 'https://example.com/hook', events: ['run_failed'] },
+        ],
       }),
     );
-    resetRelayConfigCache();
 
-    await sendRunNotification(sampleRecord);
-    if (vi.mocked(Api).mock.results.length > 0) {
-      expect(vi.mocked(Api).mock.results[0].value.sendMessage).not.toHaveBeenCalled();
-    }
+    const failedRecord: RunRecord = {
+      ...sampleRecord,
+      success: false,
+      error: 'Something went wrong',
+    };
+    await sendRunNotification(failedRecord);
+
+    expect(globalThis.fetch).toHaveBeenCalledOnce();
+    const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body);
+    expect(body.event).toBe('run_failed');
+    expect(body.success).toBe(false);
   });
 
-  it('does not send success notifications when onScheduleComplete is false', async () => {
+  it('includes HMAC signature when secret is configured', async () => {
     writeFileSync(
-      join(configDir, 'relay.yaml'),
+      join(configDir, 'webhook.yaml'),
       stringifyYaml({
         version: 1,
         enabled: true,
-        channels: { telegram: { enabled: true } },
-        notifications: { onScheduleComplete: false, onScheduleFailure: true },
-        routing: {
-          chats: {
-            'telegram:12345': { project: 'my-project', notifySchedule: true },
-          },
-        },
+        webhooks: [
+          { name: 'secure', url: 'https://example.com/hook', events: ['run_complete'], secret: 'test-secret' },
+        ],
       }),
     );
-    resetRelayConfigCache();
-
-    await sendRunNotification(sampleRecord); // success record
-    expect(Api).not.toHaveBeenCalled();
-  });
-
-  it('logs dead letters for webhook failures', async () => {
-    // Mock fetch to fail
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 403 });
-
-    writeFileSync(
-      join(configDir, 'relay.yaml'),
-      stringifyYaml({
-        version: 1,
-        enabled: true,
-        channels: { webhook: { enabled: true } },
-        routing: {
-          chats: {
-            'webhook:https://example.com/hook': {
-              project: 'my-project',
-              notifySchedule: true,
-            },
-          },
-        },
-      }),
-    );
-    resetRelayConfigCache();
 
     await sendRunNotification(sampleRecord);
 
-    const deadLetterPath = join(configDir, 'relay', 'dead-letters.jsonl');
-    expect(existsSync(deadLetterPath)).toBe(true);
-    const content = readFileSync(deadLetterPath, 'utf8');
-    expect(content).toContain('HTTP 403');
+    expect(globalThis.fetch).toHaveBeenCalledOnce();
+    const headers = (globalThis.fetch as any).mock.calls[0][1].headers;
+    expect(headers['X-PilotLynx-Signature']).toMatch(/^sha256=[0-9a-f]+$/);
+  });
 
+  it('logs error to console on fetch failure without throwing', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    writeFileSync(
+      join(configDir, 'webhook.yaml'),
+      stringifyYaml({
+        version: 1,
+        enabled: true,
+        webhooks: [
+          { name: 'failing', url: 'https://example.com/hook', events: ['run_complete'] },
+        ],
+      }),
+    );
+
+    await sendRunNotification(sampleRecord);
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Webhook "failing" failed'),
+    );
+    consoleSpy.mockRestore();
+  });
+});
+
+describe('sendWebhookNotification', () => {
+  let tmpDir: string;
+  let configDir: string;
+  const origEnv = process.env.PILOTLYNX_ROOT;
+  let originalFetch: typeof globalThis.fetch;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-webhook-direct-'));
+    configDir = join(tmpDir, CONFIG_DIR_NAME);
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(join(configDir, 'pilotlynx.yaml'), stringifyYaml({ version: 1, name: 'test' }));
+    process.env.PILOTLYNX_ROOT = configDir;
+    resetConfigCache();
+    originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+  });
+
+  afterEach(() => {
+    process.env.PILOTLYNX_ROOT = origEnv;
+    rmSync(tmpDir, { recursive: true, force: true });
+    resetConfigCache();
     globalThis.fetch = originalFetch;
+  });
+
+  it('sends payload with custom headers', async () => {
+    writeFileSync(
+      join(configDir, 'webhook.yaml'),
+      stringifyYaml({
+        version: 1,
+        enabled: true,
+        webhooks: [
+          {
+            name: 'custom',
+            url: 'https://example.com/hook',
+            events: ['run_complete'],
+            headers: { 'X-Custom': 'value' },
+          },
+        ],
+      }),
+    );
+
+    const payload: WebhookPayload = {
+      event: 'run_complete',
+      timestamp: new Date().toISOString(),
+      project: 'test',
+      workflow: 'build',
+      success: true,
+      summary: 'OK',
+      costUsd: 0.01,
+    };
+
+    await sendWebhookNotification(payload);
+
+    const headers = (globalThis.fetch as any).mock.calls[0][1].headers;
+    expect(headers['X-Custom']).toBe('value');
+    expect(headers['Content-Type']).toBe('application/json');
+    expect(headers['User-Agent']).toBe('PilotLynx-Webhook/1.0');
   });
 });

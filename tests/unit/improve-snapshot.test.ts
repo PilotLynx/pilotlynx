@@ -7,7 +7,6 @@ vi.mock('../../src/lib/project.js', () => ({
 vi.mock('../../src/lib/observation.js', () => ({
   getRecentLogs: vi.fn(),
   getLogStatistics: vi.fn(),
-  writeInsight: vi.fn(),
   writeStructuredInsights: vi.fn(),
   readRecentInsights: vi.fn(),
   writeSharedPattern: vi.fn(),
@@ -39,6 +38,11 @@ vi.mock('../../src/agents/improve.agent.js', () => ({
 
 vi.mock('../../src/agents/run.agent.js', () => ({
   getRunAgentConfig: vi.fn(),
+}));
+
+vi.mock('../../src/lib/schedule.js', () => ({
+  loadImproveState: vi.fn(() => ({ lastRun: null, projectFailures: {} })),
+  saveImproveState: vi.fn(),
 }));
 
 vi.mock('node:fs', async () => {

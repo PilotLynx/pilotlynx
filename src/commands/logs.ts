@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import Table from 'cli-table3';
-import { getRecentLogs } from '../lib/observation.js';
+import { getRecentLogs, pruneOldLogs } from '../lib/observation.js';
 
 export function makeLogsCommand(): Command {
   const cmd = new Command('logs')
@@ -79,6 +79,30 @@ export function makeLogsCommand(): Command {
       console.log(table.toString());
 
       console.log(chalk.dim(`\n${records.length} log(s) shown.`));
+    });
+
+  return cmd;
+}
+
+export function makeLogsPruneCommand(): Command {
+  const cmd = new Command('logs-prune')
+    .description('Prune old workflow run logs for a project')
+    .argument('<project>', 'project name')
+    .requiredOption('--older-than <days>', 'remove logs older than this many days')
+    .action(async (project: string, opts) => {
+      const days = parseInt(opts.olderThan, 10);
+      if (isNaN(days) || days < 1) {
+        console.error(chalk.red('--older-than must be a positive integer (days).'));
+        process.exitCode = 1;
+        return;
+      }
+
+      const pruned = pruneOldLogs(project, days);
+      if (pruned === 0) {
+        console.log(chalk.dim(`No logs older than ${days} day(s) found for "${project}".`));
+      } else {
+        console.log(chalk.green(`Pruned ${pruned} log(s) older than ${days} day(s) from "${project}".`));
+      }
     });
 
   return cmd;

@@ -83,25 +83,13 @@ export function makeInitCommand(): Command {
         writeFileSync(gitignorePath, gitignore, 'utf8');
       }
 
-      // Create default relay.yaml (disabled by default)
-      const relayConfigPath = join(configDir, 'relay.yaml');
-      if (!existsSync(relayConfigPath)) {
-        writeFileSync(relayConfigPath, YAML.stringify({
+      // Create default webhook.yaml (disabled by default)
+      const webhookConfigPath = join(configDir, 'webhook.yaml');
+      if (!existsSync(webhookConfigPath)) {
+        writeFileSync(webhookConfigPath, YAML.stringify({
           version: 1,
           enabled: false,
-          channels: {
-            telegram: { enabled: false },
-            webhook: { enabled: false },
-          },
-          notifications: {
-            onScheduleComplete: true,
-            onScheduleFailure: true,
-          },
-          routing: {
-            defaultProject: null,
-            chats: {},
-            allowedUsers: [],
-          },
+          webhooks: [],
         }), 'utf8');
       }
 
@@ -125,7 +113,7 @@ export function makeInitCommand(): Command {
       console.log(`  ${chalk.dim('registry')}  ${CONFIG_DIR_NAME}/projects.yaml`);
       console.log(`  ${chalk.dim('shared')}    ${CONFIG_DIR_NAME}/shared/`);
       console.log(`  ${chalk.dim('template')}  ${CONFIG_DIR_NAME}/template/`);
-      console.log(`  ${chalk.dim('relay')}      ${CONFIG_DIR_NAME}/relay.yaml`);
+      console.log(`  ${chalk.dim('webhooks')}   ${CONFIG_DIR_NAME}/webhook.yaml`);
       if (cronInstalled) {
         console.log(`  ${chalk.dim('cron')}      schedule tick every 15 min (auto-improve daily)`);
       }

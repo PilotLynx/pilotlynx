@@ -244,22 +244,22 @@ describe('schedule', () => {
       resetConfigCache();
     });
 
-    it('returns null lastRun when file is missing', () => {
+    it('returns default state when file is missing', () => {
       const state = loadImproveState();
-      expect(state).toEqual({ lastRun: null });
+      expect(state).toEqual({ lastRun: null, projectFailures: {} });
     });
 
-    it('returns null lastRun for malformed JSON', () => {
+    it('returns default state for malformed JSON', () => {
       writeFileSync(join(configDir, 'improve-state.json'), '!!!bad!!!');
       const state = loadImproveState();
-      expect(state).toEqual({ lastRun: null });
+      expect(state).toEqual({ lastRun: null, projectFailures: {} });
     });
 
     it('round-trips correctly', () => {
       const ts = '2025-01-15T12:00:00.000Z';
-      saveImproveState(ts);
+      saveImproveState({ lastRun: ts, projectFailures: { app1: 2 } });
       const state = loadImproveState();
-      expect(state).toEqual({ lastRun: ts });
+      expect(state).toEqual({ lastRun: ts, projectFailures: { app1: 2 } });
     });
   });
 });

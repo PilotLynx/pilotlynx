@@ -16,11 +16,18 @@ export function makeStatusCommand(): Command {
         console.log(chalk.blue.bold('Projects\n'));
 
         const table = new Table({
-          head: ['Project', 'Last Run', 'Status', 'Cost (7d)', 'Next Scheduled', 'Path'],
+          head: ['Project', 'Health', 'Last Run', 'Status', 'Cost (7d)', 'Next Scheduled', 'Path'],
           style: { head: [], border: [] },
         });
 
         for (const p of status.projects) {
+          const healthStr = p.health === 'good'
+            ? chalk.green('good')
+            : p.health === 'warning'
+              ? chalk.yellow('warn')
+              : p.health === 'critical'
+                ? chalk.red('crit')
+                : chalk.dim('—');
           const lastRun = p.lastRun
             ? new Date(p.lastRun).toISOString().replace('T', ' ').slice(0, 16)
             : chalk.dim('—');
@@ -34,7 +41,7 @@ export function makeStatusCommand(): Command {
             ? new Date(p.nextScheduled).toISOString().replace('T', ' ').slice(0, 16)
             : chalk.dim('—');
 
-          table.push([p.name, lastRun, statusStr, cost, nextSched, p.path]);
+          table.push([p.name, healthStr, lastRun, statusStr, cost, nextSched, p.path]);
         }
         console.log(table.toString());
       }

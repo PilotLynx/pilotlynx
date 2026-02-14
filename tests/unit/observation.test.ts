@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { resetConfigCache, CONFIG_DIR_NAME } from '../../src/lib/config.js';
 import { resetRegistryCache, registerProject } from '../../src/lib/registry.js';
-import { getRecentLogs, writeInsight } from '../../src/lib/observation.js';
+import { getRecentLogs } from '../../src/lib/observation.js';
 
 describe('observation', () => {
   let tmpDir: string;
@@ -128,37 +128,4 @@ describe('observation', () => {
     });
   });
 
-  describe('writeInsight', () => {
-    it('creates a new insight file with date-based name', () => {
-      writeInsight('Test insight content');
-      const insightsDir = join(configDir, 'shared', 'insights');
-      const now = new Date();
-      const y = now.getFullYear();
-      const mo = String(now.getMonth() + 1).padStart(2, '0');
-      const d = String(now.getDate()).padStart(2, '0');
-      const expectedFile = `${y}-${mo}-${d}.md`;
-      expect(existsSync(join(insightsDir, expectedFile))).toBe(true);
-      const content = readFileSync(join(insightsDir, expectedFile), 'utf8');
-      expect(content).toBe('Test insight content');
-    });
-
-    it('appends to existing insight file for same day', () => {
-      writeInsight('First insight');
-      writeInsight('Second insight');
-      const insightsDir = join(configDir, 'shared', 'insights');
-      const now = new Date();
-      const y = now.getFullYear();
-      const mo = String(now.getMonth() + 1).padStart(2, '0');
-      const d = String(now.getDate()).padStart(2, '0');
-      const content = readFileSync(join(insightsDir, `${y}-${mo}-${d}.md`), 'utf8');
-      expect(content).toContain('First insight');
-      expect(content).toContain('Second insight');
-    });
-
-    it('creates insights directory if it does not exist', () => {
-      rmSync(join(configDir, 'shared', 'insights'), { recursive: true, force: true });
-      writeInsight('New insight');
-      expect(existsSync(join(configDir, 'shared', 'insights'))).toBe(true);
-    });
-  });
 });

@@ -120,15 +120,13 @@ describe('status-ops', () => {
     expect(status.relayConfigured).toBe(false);
   });
 
-  it('reports relay as configured when enabled', () => {
+  it('reports relay as configured when webhook enabled', () => {
     writeFileSync(
-      join(configDir, 'relay.yaml'),
+      join(configDir, 'webhook.yaml'),
       YAML.stringify({
         version: 1,
         enabled: true,
-        channels: { telegram: { enabled: false }, webhook: { enabled: false } },
-        notifications: { onScheduleComplete: true, onScheduleFailure: true },
-        routing: { defaultProject: null, chats: {}, allowedUsers: [] },
+        webhooks: [],
       })
     );
 

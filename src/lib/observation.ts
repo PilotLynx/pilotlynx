@@ -1,7 +1,7 @@
-import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync, appendFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { getProjectDir, INSIGHTS_DIR, SHARED_DOCS_DIR } from './config.js';
-import type { RunRecord } from './types.js';
+import type { RunRecord, HealthScore } from './types.js';
 
 // ── Log Statistics ──
 
@@ -94,6 +94,37 @@ export function getLogStatistics(project: string, days: number): LogStatistics {
   };
 }
 
+// ── Health Score ──
+
+export function getHealthScore(project: string): HealthScore {
+  const logs7d = getRecentLogs(project, 7);
+  const logs30d = getRecentLogs(project, 30);
+
+  const successRate7d = logs7d.length > 0 ? logs7d.filter((l) => l.success).length / logs7d.length : 0;
+  const successRate30d = logs30d.length > 0 ? logs30d.filter((l) => l.success).length / logs30d.length : 0;
+
+  const avgCost7d = logs7d.length > 0 ? logs7d.reduce((sum, l) => sum + (l.costUsd ?? 0), 0) / logs7d.length : 0;
+  const avgCost30d = logs30d.length > 0 ? logs30d.reduce((sum, l) => sum + (l.costUsd ?? 0), 0) / logs30d.length : 0;
+
+  // Trend: compare 7d rate vs 30d rate
+  let trend: 'improving' | 'stable' | 'declining';
+  const diff = successRate7d - successRate30d;
+  if (diff > 0.05) {
+    trend = 'improving';
+  } else if (diff < -0.05) {
+    trend = 'declining';
+  } else {
+    trend = 'stable';
+  }
+
+  // Score = weighted combination: 60% success rate, 25% cost efficiency, 15% trend
+  const costEfficiency = avgCost30d > 0 ? Math.min(1, avgCost30d / Math.max(avgCost7d, 0.0001)) : 1;
+  const trendBonus = trend === 'improving' ? 0.1 : trend === 'declining' ? -0.1 : 0;
+  const score = Math.max(0, Math.min(100, (successRate7d * 60 + costEfficiency * 25 + (0.5 + trendBonus) * 15)));
+
+  return { score, trend, successRate7d, successRate30d, avgCost7d, avgCost30d };
+}
+
 // ── Log Reading ──
 
 export function getRecentLogs(project: string, days: number): RunRecord[] {
@@ -133,6 +164,28 @@ export function getRecentLogs(project: string, days: number): RunRecord[] {
   return records;
 }
 
+// ── Log Rotation ──
+
+export function pruneOldLogs(project: string, olderThanDays: number): number {
+  const logsDir = join(getProjectDir(project), 'logs');
+  if (!existsSync(logsDir)) return 0;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - olderThanDays);
+  let pruned = 0;
+  const files = readdirSync(logsDir).filter((f) => f.endsWith('.json'));
+  for (const file of files) {
+    try {
+      const content = readFileSync(join(logsDir, file), 'utf8');
+      const record = JSON.parse(content) as RunRecord;
+      if (new Date(record.startedAt).getTime() < cutoff.getTime()) {
+        unlinkSync(join(logsDir, file));
+        pruned++;
+      }
+    } catch { /* skip corrupt files */ }
+  }
+  return pruned;
+}
+
 // ── Insights ──
 
 export interface StructuredInsight {
@@ -143,22 +196,6 @@ export interface StructuredInsight {
   evidence: string;
   supersedes?: string;
   date: string;
-}
-
-export function writeInsight(content: string): void {
-  const dir = INSIGHTS_DIR();
-  mkdirSync(dir, { recursive: true });
-
-  const now = new Date();
-  const dateStr = formatDate(now);
-  const filename = `${dateStr}.md`;
-  const filePath = join(dir, filename);
-
-  if (existsSync(filePath)) {
-    appendFileSync(filePath, `\n${content}`, 'utf8');
-  } else {
-    writeFileSync(filePath, content, 'utf8');
-  }
 }
 
 export function writeStructuredInsights(insights: StructuredInsight[]): void {
@@ -182,12 +219,6 @@ export function writeStructuredInsights(insights: StructuredInsight[]): void {
 
   const merged = [...existing, ...insights];
   writeFileSync(jsonPath, JSON.stringify(merged, null, 2), 'utf8');
-
-  // Also write human-readable markdown
-  const markdown = insights
-    .map((i) => `### [${i.category}] ${i.insight}\n- Evidence: ${i.evidence}\n- Actionable: ${i.actionable}${i.supersedes ? `\n- Supersedes: ${i.supersedes}` : ''}`)
-    .join('\n\n');
-  writeInsight(markdown);
 }
 
 export function readRecentInsights(count: number): StructuredInsight[] {
@@ -245,11 +276,15 @@ export function readSharedPatterns(): SharedPattern[] {
 
   const files = readdirSync(dir).filter((f) => f.endsWith('.json'));
   const patterns: SharedPattern[] = [];
+  const now = new Date();
 
   for (const file of files) {
     try {
       const content = readFileSync(join(dir, file), 'utf8');
-      patterns.push(JSON.parse(content) as SharedPattern);
+      const pattern = JSON.parse(content) as SharedPattern;
+      if (new Date(pattern.expiresAt) >= now) {
+        patterns.push(pattern);
+      }
     } catch {
       // Skip corrupt files
     }

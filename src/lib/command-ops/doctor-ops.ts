@@ -1,11 +1,12 @@
-import { existsSync, accessSync, constants } from 'node:fs';
+import { existsSync, accessSync, constants, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getConfigRoot } from '../config.js';
+import { getConfigRoot, SHARED_DOCS_DIR } from '../config.js';
 import { getGlobalConfigPath } from '../global-config.js';
 import { getRegisteredProjects } from '../registry.js';
 import { loadPolicy, resetPolicyCache } from '../policy.js';
 import { SecretsAccessPolicySchema, ToolAccessPolicySchema } from '../types.js';
 import { isScheduleCronInstalled } from '../cron.js';
+import type { SharedPattern } from '../observation.js';
 
 export type CheckStatus = 'pass' | 'warn' | 'fail';
 
@@ -196,6 +197,39 @@ export function runDoctorChecks(): CheckResult[] {
       message: 'Not found in config root',
       suggestion: 'Run `pilotlynx init` or copy the bundled template to pilotlynx/template/.',
     });
+  }
+
+  // 10. Expired shared patterns
+  try {
+    const patternsDir = join(SHARED_DOCS_DIR(), 'patterns');
+    if (existsSync(patternsDir)) {
+      const now = new Date();
+      const files = readdirSync(patternsDir).filter((f) => f.endsWith('.json'));
+      let expiredCount = 0;
+      for (const file of files) {
+        try {
+          const content = readFileSync(join(patternsDir, file), 'utf8');
+          const pattern = JSON.parse(content) as SharedPattern;
+          if (new Date(pattern.expiresAt) < now) {
+            expiredCount++;
+          }
+        } catch {
+          // Skip corrupt files
+        }
+      }
+      if (expiredCount === 0) {
+        checks.push({ name: 'Shared patterns', status: 'pass', message: 'No expired patterns' });
+      } else {
+        checks.push({
+          name: 'Shared patterns',
+          status: 'warn',
+          message: `${expiredCount} expired pattern(s) found`,
+          suggestion: 'Expired patterns are filtered from reads but still occupy disk. Run improve to regenerate or manually remove them.',
+        });
+      }
+    }
+  } catch {
+    // Non-fatal — skip if patterns dir is inaccessible
   }
 
   return checks;

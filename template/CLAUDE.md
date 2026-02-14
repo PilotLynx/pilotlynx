@@ -23,9 +23,14 @@ RUNBOOK.md              — operational procedures
 .claude/skills/         — project skills
 .claude/rules/          — modular topic-specific rules
 workflows/              — TypeScript Agent SDK workflows
-memory/MEMORY.md        — durable curated memory entrypoint
+memory/MEMORY.md        — durable curated memory (human-written)
+memory/episodes.jsonl   — structured run history (auto-generated)
+memory/procedures/      — executable patterns and recipes
+evals/                  — evaluation test cases
 artifacts/              — output artifacts (gitignored)
 logs/                   — run logs (gitignored)
+logs/traces/            — JSONL run traces (gitignored)
+logs/audit/             — audit trail entries (gitignored)
 ```
 
 ## Settings
@@ -77,3 +82,27 @@ The `.envrc` file is gitignored and must be regenerated when secrets change.
 - Each memory file should focus on a single topic.
 - Remove outdated entries proactively.
 - Never store secrets, API keys, or credentials in memory files.
+
+### Episodic Memory
+
+`memory/episodes.jsonl` stores structured run history as JSON Lines. Each entry:
+
+```json
+{"date": "ISO-8601", "workflow": "name", "result": "success|failure", "cost": 0.05, "keyDecisions": ["..."], "tags": ["..."]}
+```
+
+Agents can query episodes by workflow, result, or tags to inform decisions. MEMORY.md remains the curated, human-written knowledge base.
+
+### Procedures
+
+`memory/procedures/` contains executable patterns — step-by-step recipes that agents can follow. Unlike skills (which are discovery prompts), procedures are detailed operational sequences.
+
+## Evaluations
+
+`evals/` contains test cases for validating workflow behavior. Each `.json` file defines test cases:
+
+```json
+[{"name": "test_name", "workflow": "workflow_name", "input": "prompt", "expectedBehavior": "description", "tags": ["smoke"]}]
+```
+
+Run evals with `pilotlynx eval {{PROJECT_NAME}}`. Results are stored in `evals/results/`.

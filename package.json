@@ -51,14 +51,12 @@
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.37",
-    "@grammyjs/runner": "^2.0.3",
     "chalk": "^5.4.1",
     "cli-table3": "^0.6.5",
     "commander": "^13.1.0",
     "croner": "^9.0.0",
     "dotenv": "^16.4.7",
     "env-paths": "^3.0.0",
-    "grammy": "^1.40.0",
     "proper-lockfile": "^4.1.2",
     "yaml": "^2.7.0",
     "zod": "^4.0.0"

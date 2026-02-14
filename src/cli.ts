@@ -13,12 +13,14 @@ import { makeInitCommand } from './commands/init.js';
 import { makeEnvCommand } from './commands/env.js';
 import { makeLinkCommand } from './commands/link.js';
 import { makeUnlinkCommand } from './commands/unlink.js';
-import { makeLogsCommand } from './commands/logs.js';
+import { makeLogsCommand, makeLogsPruneCommand } from './commands/logs.js';
 import { makeInsightsCommand } from './commands/insights.js';
 import { makeRelayCommand } from './commands/relay.js';
 import { makeStatusCommand } from './commands/status.js';
 import { makeCostCommand } from './commands/cost.js';
 import { makeDoctorCommand } from './commands/doctor.js';
+import { makeEvalCommand } from './commands/eval.js';
+import { makeAuditCommand } from './commands/audit.js';
 
 const program = new Command();
 
@@ -50,11 +52,14 @@ program.addCommand(makeEnvCommand());
 program.addCommand(makeLinkCommand());
 program.addCommand(makeUnlinkCommand());
 program.addCommand(makeLogsCommand());
+program.addCommand(makeLogsPruneCommand());
 program.addCommand(makeInsightsCommand());
 program.addCommand(makeRelayCommand());
 program.addCommand(makeStatusCommand());
 program.addCommand(makeCostCommand());
 program.addCommand(makeDoctorCommand());
+program.addCommand(makeEvalCommand());
+program.addCommand(makeAuditCommand());
 
 try {
   await program.parseAsync(process.argv);

@@ -166,7 +166,7 @@ describe('run-ops', () => {
       numTurns: 2,
     });
 
-    await executeRun('myapp', 'daily_check', 'Improve error handling');
+    await executeRun('myapp', 'daily_check', { feedbackPrompt: 'Improve error handling' });
 
     expect(getRunAgentConfig).toHaveBeenCalledWith(
       'myapp',

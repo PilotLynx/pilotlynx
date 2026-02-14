@@ -3,69 +3,66 @@ import { mkdirSync, writeFileSync, rmSync, mkdtempSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { stringify as stringifyYaml } from 'yaml';
-import { loadRelayConfig, resetRelayConfigCache, getRelayDir } from '../../../src/lib/relay/config.js';
+import { loadWebhookConfig } from '../../../src/lib/relay/config.js';
 import { resetConfigCache, CONFIG_DIR_NAME } from '../../../src/lib/config.js';
 
-describe('relay config', () => {
+describe('webhook config', () => {
   let tmpDir: string;
   let configDir: string;
   const origEnv = process.env.PILOTLYNX_ROOT;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-relay-cfg-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'pilotlynx-webhook-cfg-'));
     configDir = join(tmpDir, CONFIG_DIR_NAME);
     mkdirSync(configDir, { recursive: true });
     writeFileSync(join(configDir, 'pilotlynx.yaml'), stringifyYaml({ version: 1, name: 'test' }));
     process.env.PILOTLYNX_ROOT = configDir;
     resetConfigCache();
-    resetRelayConfigCache();
   });
 
   afterEach(() => {
     process.env.PILOTLYNX_ROOT = origEnv;
     rmSync(tmpDir, { recursive: true, force: true });
     resetConfigCache();
-    resetRelayConfigCache();
   });
 
-  it('returns null when relay.yaml does not exist', () => {
-    expect(loadRelayConfig()).toBeNull();
+  it('returns null when webhook.yaml does not exist', () => {
+    expect(loadWebhookConfig()).toBeNull();
   });
 
-  it('loads a valid relay.yaml', () => {
+  it('loads a valid webhook.yaml', () => {
     writeFileSync(
-      join(configDir, 'relay.yaml'),
+      join(configDir, 'webhook.yaml'),
       stringifyYaml({
         version: 1,
         enabled: true,
-        channels: { telegram: { enabled: true } },
+        webhooks: [
+          { name: 'slack', url: 'https://hooks.slack.com/test', events: ['run_complete'] },
+        ],
       }),
     );
-    const config = loadRelayConfig();
+    const config = loadWebhookConfig();
     expect(config).not.toBeNull();
     expect(config!.version).toBe(1);
-    expect(config!.channels.telegram.enabled).toBe(true);
+    expect(config!.enabled).toBe(true);
+    expect(config!.webhooks).toHaveLength(1);
+    expect(config!.webhooks[0].name).toBe('slack');
   });
 
   it('reads config fresh each time (no caching)', () => {
     writeFileSync(
-      join(configDir, 'relay.yaml'),
-      stringifyYaml({ version: 1, enabled: true }),
+      join(configDir, 'webhook.yaml'),
+      stringifyYaml({ version: 1, enabled: true, webhooks: [] }),
     );
-    const a = loadRelayConfig();
+    const a = loadWebhookConfig();
     expect(a!.enabled).toBe(true);
 
-    // Update the file
     writeFileSync(
-      join(configDir, 'relay.yaml'),
-      stringifyYaml({ version: 1, enabled: false }),
+      join(configDir, 'webhook.yaml'),
+      stringifyYaml({ version: 1, enabled: false, webhooks: [] }),
     );
-    const b = loadRelayConfig();
+    const b = loadWebhookConfig();
     expect(b!.enabled).toBe(false);
   });
 
-  it('getRelayDir returns path under config root', () => {
-    const dir = getRelayDir();
-    expect(dir).toBe(join(configDir, 'relay'));
-  });
 });

@@ -1,10 +1,10 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
-import type { AgentConfig, AgentResult } from './types.js';
+import type { AgentConfig, AgentResult, TraceSpan } from './types.js';
 
 /** Local type for SDK streaming messages (SDK doesn't export message types) */
 interface SDKMessage {
   type: string;
-  content?: string | Array<{ type: string; text: string }>;
+  content?: string | Array<{ type: string; text: string; name?: string }>;
   subtype?: string;
   result?: string;
   error?: string;
@@ -25,6 +25,7 @@ interface SDKMessage {
     cache_read_input_tokens?: number;
     cache_creation_input_tokens?: number;
   }>;
+  tool_name?: string;
 }
 
 /**
@@ -61,9 +62,37 @@ export function buildRuntimeEnv(
   return { ...base, ...policyEnv };
 }
 
+export interface RunAgentOptions {
+  timeoutMs?: number;
+  tracing?: boolean;
+}
+
 export async function runAgent(
   config: AgentConfig,
   onText?: (text: string) => void,
+  options?: RunAgentOptions,
+): Promise<AgentResult> {
+  const { timeoutMs, tracing } = options ?? {};
+
+  if (timeoutMs && timeoutMs > 0) {
+    return Promise.race([
+      runAgentCore(config, onText, tracing),
+      new Promise<AgentResult>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Run timed out after ${Math.round(timeoutMs / 1000)}s`)),
+          timeoutMs,
+        ),
+      ),
+    ]);
+  }
+
+  return runAgentCore(config, onText, tracing);
+}
+
+async function runAgentCore(
+  config: AgentConfig,
+  onText: ((text: string) => void) | undefined,
+  tracing: boolean | undefined,
 ): Promise<AgentResult> {
   const start = Date.now();
   let resultText = '';
@@ -76,6 +105,7 @@ export async function runAgent(
   let cacheReadTokens = 0;
   let cacheCreationTokens = 0;
   let model: string | undefined;
+  const spans: TraceSpan[] = [];
 
   const runtimeEnv = config.env ? buildRuntimeEnv(config.env) : undefined;
 
@@ -104,6 +134,11 @@ export async function runAgent(
 
     for await (const message of q) {
       const msg = message as SDKMessage;
+
+      if (tracing) {
+        spans.push(buildSpan(msg, start));
+      }
+
       if (msg.type === 'assistant') {
         const text =
           typeof msg.content === 'string'
@@ -165,5 +200,36 @@ export async function runAgent(
     ...(cacheReadTokens > 0 && { cacheReadTokens }),
     ...(cacheCreationTokens > 0 && { cacheCreationTokens }),
     ...(model && { model }),
+    ...(tracing && spans.length > 0 && { spans }),
   };
+}
+
+function buildSpan(msg: SDKMessage, runStartMs: number): TraceSpan {
+  const now = new Date();
+  const span: TraceSpan = {
+    type: msg.type as TraceSpan['type'],
+    timestamp: now.toISOString(),
+  };
+
+  if (msg.tool_name) {
+    span.toolName = msg.tool_name;
+  }
+
+  if (msg.usage) {
+    span.tokens = {
+      input: msg.usage.input_tokens,
+      output: msg.usage.output_tokens,
+    };
+  }
+
+  if (msg.total_cost_usd) {
+    span.costUsd = msg.total_cost_usd;
+  }
+
+  if (msg.type === 'result') {
+    span.durationMs = Date.now() - runStartMs;
+    if (msg.error) span.message = msg.error.slice(0, 200);
+  }
+
+  return span;
 }

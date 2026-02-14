@@ -7,7 +7,6 @@ vi.mock('../../../src/lib/project.js', () => ({
 vi.mock('../../../src/lib/observation.js', () => ({
   getRecentLogs: vi.fn(),
   getLogStatistics: vi.fn(),
-  writeInsight: vi.fn(),
   writeStructuredInsights: vi.fn(),
   readRecentInsights: vi.fn(),
   writeSharedPattern: vi.fn(),
@@ -43,6 +42,11 @@ vi.mock('../../../src/agents/run.agent.js', () => ({
 
 vi.mock('../../../src/lib/logger.js', () => ({
   writeRunLog: vi.fn(),
+}));
+
+vi.mock('../../../src/lib/schedule.js', () => ({
+  loadImproveState: vi.fn(() => ({ lastRun: null, projectFailures: {} })),
+  saveImproveState: vi.fn(),
 }));
 
 vi.mock('node:fs', async () => {
@@ -101,8 +105,8 @@ describe('improve-ops', () => {
     vi.mocked(getProjectDir).mockReturnValue('/tmp/app1');
     // existsSync: briefPath exists, skillsDir exists (so hasNoSkills depends on readdirSync)
     vi.mocked(existsSync).mockReturnValue(true);
-    // readdirSync returns .md files for skills dir so hasNoSkills=false
-    vi.mocked(readdirSync).mockReturnValue(['existing-skill.md'] as any);
+    // readdirSync returns .md files for skills dir and .ts files for workflows dir
+    vi.mocked(readdirSync).mockReturnValue(['existing-skill.md', 'daily_feedback.ts'] as any);
     // readFileSync returns non-template content so hasDefaultBrief=false (must be >200 chars with no template markers)
     vi.mocked(readFileSync).mockReturnValue('This is a real project brief with specific goals and meaningful content that has been carefully written by the project owner. It describes the architecture, key decisions, deployment strategy, testing approach, and all the important details that make this a fully configured and active project in the workspace.');
 
